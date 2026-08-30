@@ -37,6 +37,7 @@ function cookieOptions(isProd: boolean) {
     sameSite: isProd ? ("none" as const) : ("lax" as const),
     path: "/",
     maxAge: SESSION_MAX_AGE,
+    signed: false,
   };
 }
 

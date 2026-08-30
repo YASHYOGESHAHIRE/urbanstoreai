@@ -46,7 +46,13 @@ async function build(): Promise<void> {
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
 
   await app.register(fastifyCors, {
-    origin: frontendUrl,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (origin.startsWith("http://localhost")) return cb(null, true);
+      if (origin === frontendUrl) return cb(null, true);
+      if (origin.endsWith(".vercel.app")) return cb(null, true);
+      cb(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

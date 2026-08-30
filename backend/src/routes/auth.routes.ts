@@ -34,7 +34,7 @@ function cookieOptions(isProd: boolean) {
   return {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? ("strict" as const) : ("lax" as const),
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
     path: "/",
     maxAge: SESSION_MAX_AGE,
   };

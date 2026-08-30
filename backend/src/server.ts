@@ -57,7 +57,17 @@ async function bootstrap() {
 
   // ── CORS ────────────────────────────────────────────────────────────────────
   await app.register(fastifyCors, {
-    origin: frontendUrl,
+    origin: (origin, cb) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return cb(null, true);
+      // Allow localhost for local dev
+      if (origin.startsWith("http://localhost")) return cb(null, true);
+      // Allow exact frontend URL
+      if (origin === frontendUrl) return cb(null, true);
+      // Allow any Vercel preview/production subdomain
+      if (origin.endsWith(".vercel.app")) return cb(null, true);
+      cb(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

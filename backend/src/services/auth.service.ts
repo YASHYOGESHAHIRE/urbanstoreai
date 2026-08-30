@@ -1,4 +1,4 @@
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { prisma } from "../db/prisma.js";
 
 // 30-day session lifetime
@@ -28,12 +28,7 @@ export async function registerUser(
     throw err;
   }
 
-  const passwordHash = await argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
-  });
+  const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
     data: { name, email, passwordHash },
@@ -62,7 +57,7 @@ export async function loginUser(
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw invalidErr;
 
-  const valid = await argon2.verify(user.passwordHash, password);
+  const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw invalidErr;
 
   // Rotate session on each login — delete old ones for this user

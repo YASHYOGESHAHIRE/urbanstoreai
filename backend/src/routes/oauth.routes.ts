@@ -42,6 +42,29 @@ const TokenBodySchema = z.discriminatedUnion("grant_type", [
 
 export async function oauthRoutes(app: FastifyInstance) {
 
+  const backendUrl = process.env.BACKEND_PUBLIC_URL ?? `https://urbanstoreai-jz8i.vercel.app`;
+  const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
+
+  /**
+   * GET /.well-known/oauth-authorization-server
+   * OAuth 2.0 Authorization Server Metadata (RFC 8414)
+   * Required by MCP clients (Claude) to discover OAuth endpoints automatically.
+   */
+  app.get("/.well-known/oauth-authorization-server", async (_request, reply) => {
+    return reply.send({
+      issuer: backendUrl,
+      authorization_endpoint: `${backendUrl}/oauth/authorize`,
+      token_endpoint: `${backendUrl}/oauth/token`,
+      revocation_endpoint: `${backendUrl}/oauth/revoke`,
+      introspection_endpoint: `${backendUrl}/oauth/introspect`,
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
+      token_endpoint_auth_methods_supported: ["client_secret_post"],
+      scopes_supported: ["profile", "cart:read", "cart:write", "orders:read", "checkout"],
+      code_challenge_methods_supported: ["S256"],
+    });
+  });
+
   /**
    * GET /oauth/authorize
    * Agent redirects user here. We check if user is logged in:

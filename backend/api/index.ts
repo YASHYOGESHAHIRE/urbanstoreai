@@ -17,6 +17,7 @@ import { agentRoutes } from "../src/routes/agent.routes.js";
 import { openApiRoutes } from "../src/routes/openapi.routes.js";
 import { adminRoutes } from "../src/routes/admin.routes.js";
 import { behaviourRoutes } from "../src/routes/behaviour.routes.js";
+import { mcpRoutes } from "../src/routes/mcp.routes.js";
 import { prisma } from "../src/db/prisma.js";
 
 declare module "fastify" {
@@ -72,6 +73,7 @@ async function build(): Promise<void> {
   await app.register(openApiRoutes);
   await app.register(adminRoutes);
   await app.register(behaviourRoutes);
+  await app.register(mcpRoutes);
 
   app.get("/health", async (_req, reply) =>
     reply.send({ status: "ok", timestamp: new Date().toISOString() })

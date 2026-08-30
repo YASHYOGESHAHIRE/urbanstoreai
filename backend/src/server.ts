@@ -12,6 +12,7 @@ import { agentRoutes } from "./routes/agent.routes.js";
 import { openApiRoutes } from "./routes/openapi.routes.js";
 import { adminRoutes } from "./routes/admin.routes.js";
 import { behaviourRoutes } from "./routes/behaviour.routes.js";
+import { mcpRoutes } from "./routes/mcp.routes.js";
 import { prisma } from "./db/prisma.js";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -123,6 +124,7 @@ async function bootstrap() {
 
   // ── Behaviour tracking ────────────────────────────────────────────────────
   await app.register(behaviourRoutes);
+  await app.register(mcpRoutes);
 
   // ── Health ────────────────────────────────────────────────────────────────────
   app.get("/health", async (_req, reply) => {

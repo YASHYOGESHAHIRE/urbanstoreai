@@ -18,7 +18,7 @@
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { McpServer } from "@modelcontextprotocol/server";
 import { fastifyMcpPlugin } from "@modelcontextprotocol/fastify";
-import * as z from "zod";
+import * as z from "zod/v4";
 import { getUserFromToken } from "../services/auth.service.js";
 import { searchProducts, getProduct } from "../services/catalog.service.js";
 import { getOrCreateCart, addToCart, removeFromCart } from "../services/cart.service.js";

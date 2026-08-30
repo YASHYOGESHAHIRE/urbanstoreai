@@ -24,6 +24,7 @@ interface ExplainBlock {
     budget?: string;
     style?: string[];
     context?: string[];
+    intent?: string;
   };
   search: {
     query: string;

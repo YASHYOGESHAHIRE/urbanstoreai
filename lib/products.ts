@@ -129,9 +129,10 @@ function fromCatalog(entry: any): Product {
   };
 }
 
-// Import catalogue — resolve via alias to backend folder
+// Import catalogue — path is relative to repo root so it works both locally
+// and in Vercel's build environment (which resolves from the project root).
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const catalogRaw: unknown[] = require("../backend/urban_store_catalog.json");
+const catalogRaw: unknown[] = require("../backend/urban_store_catalog.json") as unknown[];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const products: Product[] = (catalogRaw as any[]).map(fromCatalog);

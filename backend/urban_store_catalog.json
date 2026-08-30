@@ -1,0 +1,1684 @@
+[
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shoe_001",
+      "name": "Urban Stride Runner",
+      "brand": "Urban Store Sport",
+      "category": { "id": "footwear", "name": "Footwear" },
+      "subcategory": { "id": "running_shoes", "name": "Running Shoes" },
+      "description": "Lightweight road running shoe with breathable mesh upper and responsive midsole cushioning. Designed for daily training runs on paved surfaces.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black and blue road running shoe, side view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "shoe-sneaker" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_running", "gym_training"],
+        "audience": ["beginners", "daily_runners", "fitness_enthusiasts"],
+        "occasions": ["training", "everyday_fitness"],
+        "style": ["sporty", "modern", "minimal"],
+        "suitable_for": ["road_running", "pavement", "beginner_runners", "intermediate_runners"],
+        "not_suitable_for": ["trail_running", "wet_terrain", "formal_occasions"],
+        "characteristics": {
+          "cushioning": "high",
+          "stability": "neutral",
+          "fit": "neutral",
+          "terrain": ["road", "pavement"],
+          "water_resistance": false,
+          "weight_grams": 285,
+          "runner_level": ["beginner", "intermediate"]
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_shoe_002"],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": [],
+        "upgrade_to": ["urs_shoe_002"],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-SHOE-001-BLK-8",
+          "attributes": { "size": "8", "color": "black" },
+          "commerce": {
+            "price": { "amount": 2799, "currency": "INR" },
+            "mrp": { "amount": 3499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 24 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-001-BLU-9",
+          "attributes": { "size": "9", "color": "blue" },
+          "commerce": {
+            "price": { "amount": 2799, "currency": "INR" },
+            "mrp": { "amount": 3499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 17 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-001-BLK-10",
+          "attributes": { "size": "10", "color": "black" },
+          "commerce": {
+            "price": { "amount": 2799, "currency": "INR" },
+            "mrp": { "amount": 3499, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 3 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shoe_002",
+      "name": "TrailBlaze Pro",
+      "brand": "Urban Store Sport",
+      "category": { "id": "footwear", "name": "Footwear" },
+      "subcategory": { "id": "running_shoes", "name": "Running Shoes" },
+      "description": "Rugged trail running shoe with reinforced lugged grip and water-resistant upper. Built for unpredictable terrain and wet conditions.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Grey trail running shoe with lugged sole, side view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "shoe-sneaker" }
+      },
+      "semantic_profile": {
+        "use_cases": ["trail_running", "trekking", "outdoor_fitness"],
+        "audience": ["trail_runners", "hikers", "outdoor_enthusiasts"],
+        "occasions": ["training", "outdoor_activity"],
+        "style": ["sporty", "rugged"],
+        "suitable_for": ["trail_running", "wet_terrain", "uneven_ground", "mud", "rocks"],
+        "not_suitable_for": ["road_racing", "formal_occasions", "daily_office"],
+        "characteristics": {
+          "cushioning": "medium",
+          "stability": "high",
+          "fit": "snug",
+          "terrain": ["trail", "mud", "rock", "wet_surface"],
+          "water_resistance": true,
+          "weight_grams": 310,
+          "runner_level": ["intermediate", "advanced"]
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_shoe_001"],
+        "alternative_to": ["urs_shoe_001"],
+        "compatible_with": [],
+        "complements": [],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-SHOE-002-GRY-8",
+          "attributes": { "size": "8", "color": "grey" },
+          "commerce": {
+            "price": { "amount": 3499, "currency": "INR" },
+            "mrp": { "amount": 3999, "currency": "INR" },
+            "availability": { "status": "out_of_stock", "quantity_available": 0 },
+            "last_updated": "2026-08-25T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-002-GRY-9",
+          "attributes": { "size": "9", "color": "grey" },
+          "commerce": {
+            "price": { "amount": 3499, "currency": "INR" },
+            "mrp": { "amount": 3999, "currency": "INR" },
+            "availability": { "status": "out_of_stock", "quantity_available": 0 },
+            "last_updated": "2026-08-25T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shoe_003",
+      "name": "Canvas Comfort Sneaker",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "footwear", "name": "Footwear" },
+      "subcategory": { "id": "casual_shoes", "name": "Casual Shoes" },
+      "description": "Everyday canvas sneaker with a vulcanised flat sole and relaxed fit. Lightweight and versatile for casual daily use.",
+      "media": {
+        "primary_image": { "url": "", "alt": "White canvas sneaker, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "shoe-sneaker" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_use", "casual_outings", "college"],
+        "audience": ["students", "young_adults", "casual_wearers"],
+        "occasions": ["everyday", "weekend", "college"],
+        "style": ["casual", "classic", "minimal"],
+        "suitable_for": ["casual_settings", "warm_weather", "light_walking"],
+        "not_suitable_for": ["formal_occasions", "running", "sports", "wet_conditions"],
+        "characteristics": {
+          "material": "canvas",
+          "sole_type": "vulcanised_flat",
+          "fit": "relaxed",
+          "water_resistance": false,
+          "weight_grams": 260,
+          "formality": "casual"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_jean_002", "urs_tee_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_tee_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-SHOE-003-WHT-8",
+          "attributes": { "size": "8", "color": "white" },
+          "commerce": {
+            "price": { "amount": 1499, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 40 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-003-WHT-9",
+          "attributes": { "size": "9", "color": "white" },
+          "commerce": {
+            "price": { "amount": 1499, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 35 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-003-BLK-9",
+          "attributes": { "size": "9", "color": "black" },
+          "commerce": {
+            "price": { "amount": 1499, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 28 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shoe_004",
+      "name": "Classic Oxford",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "footwear", "name": "Footwear" },
+      "subcategory": { "id": "formal_shoes", "name": "Formal Shoes" },
+      "description": "Genuine leather Oxford shoe with a hand-polished finish and cushioned insole. Designed for formal office and event wear.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black leather Oxford formal shoe, side view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "shoe-formal" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "formal_events", "weddings", "interviews"],
+        "audience": ["professionals", "men"],
+        "occasions": ["formal_event", "work", "wedding", "interview"],
+        "style": ["classic", "minimal", "elegant"],
+        "suitable_for": ["formal_wear", "smart_casual", "office"],
+        "not_suitable_for": ["sports", "casual_daily", "wet_conditions"],
+        "characteristics": {
+          "material": "genuine_leather",
+          "sole_type": "leather_sole",
+          "fit": "standard",
+          "water_resistance": false,
+          "weight_grams": 320,
+          "formality": "high"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_belt_001", "urs_shirt_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_belt_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-SHOE-004-BLK-8",
+          "attributes": { "size": "8", "color": "black" },
+          "commerce": {
+            "price": { "amount": 3299, "currency": "INR" },
+            "mrp": { "amount": 3999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 12 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-004-BLK-9",
+          "attributes": { "size": "9", "color": "black" },
+          "commerce": {
+            "price": { "amount": 3299, "currency": "INR" },
+            "mrp": { "amount": 3999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 8 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHOE-004-BRN-9",
+          "attributes": { "size": "9", "color": "brown" },
+          "commerce": {
+            "price": { "amount": 3299, "currency": "INR" },
+            "mrp": { "amount": 3999, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 2 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_bag_001",
+      "name": "Minimal Laptop Sleeve Bag",
+      "brand": "Urban Store Travel",
+      "category": { "id": "bags", "name": "Bags" },
+      "subcategory": { "id": "laptop_bags", "name": "Laptop Bags" },
+      "description": "Minimalist padded laptop bag with a water-resistant shell and four organised compartments. Built for daily office commutes.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Grey minimal laptop bag with padded shoulder strap" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "briefcase-outline" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "commuting", "college"],
+        "audience": ["professionals", "students"],
+        "occasions": ["work", "everyday"],
+        "style": ["minimal", "professional", "modern"],
+        "suitable_for": ["office_commute", "daily_laptop_carry", "minimal_style_preference"],
+        "not_suitable_for": ["heavy_overnight_travel", "sports", "hiking"],
+        "characteristics": {
+          "capacity_litres": 22,
+          "laptop_sizes_supported": [13, 14, 15.6],
+          "compartments": 4,
+          "material": "technical_fabric",
+          "water_resistance": true,
+          "use_type": "office"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_bag_002"],
+        "alternative_to": ["urs_bag_002"],
+        "compatible_with": [],
+        "complements": ["urs_wallet_001", "urs_belt_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_wallet_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-BAG-001-GRY",
+          "attributes": { "color": "grey" },
+          "commerce": {
+            "price": { "amount": 2799, "currency": "INR" },
+            "mrp": { "amount": 3299, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 30 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-BAG-001-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 2799, "currency": "INR" },
+            "mrp": { "amount": 3299, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 18 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_bag_002",
+      "name": "Everyday Office Backpack",
+      "brand": "Urban Store Travel",
+      "category": { "id": "bags", "name": "Bags" },
+      "subcategory": { "id": "backpacks", "name": "Backpacks" },
+      "description": "Structured office backpack with a dedicated padded laptop sleeve and three organised compartments. Comfortable for all-day carry.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black structured office backpack with laptop compartment" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "bag-personal" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "commuting", "college"],
+        "audience": ["professionals", "students"],
+        "occasions": ["work", "everyday"],
+        "style": ["minimal", "professional", "modern"],
+        "suitable_for": ["office_commute", "daily_laptop_carry", "all_day_carry"],
+        "not_suitable_for": ["formal_events", "hiking", "overnight_travel"],
+        "characteristics": {
+          "capacity_litres": 20,
+          "laptop_sizes_supported": [13, 14, 15.6],
+          "compartments": 3,
+          "material": "polyester",
+          "water_resistance": false,
+          "use_type": "office"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_bag_001"],
+        "alternative_to": ["urs_bag_001"],
+        "compatible_with": [],
+        "complements": ["urs_wallet_001"],
+        "upgrade_to": ["urs_bag_001"],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-BAG-002-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 2199, "currency": "INR" },
+            "mrp": { "amount": 2599, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 22 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-BAG-002-NVY",
+          "attributes": { "color": "navy" },
+          "commerce": {
+            "price": { "amount": 2199, "currency": "INR" },
+            "mrp": { "amount": 2599, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 4 },
+            "last_updated": "2026-08-20T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_bag_003",
+      "name": "Voyager Travel Duffel",
+      "brand": "Urban Store Travel",
+      "category": { "id": "bags", "name": "Bags" },
+      "subcategory": { "id": "travel_bags", "name": "Travel Bags" },
+      "description": "Large-capacity duffel bag with reinforced handles and a water-resistant polyester shell. Built for weekend trips and overnight travel.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Olive green large travel duffel bag with side handles" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "bag-suitcase" }
+      },
+      "semantic_profile": {
+        "use_cases": ["travel", "weekend_trips", "gym"],
+        "audience": ["travelers", "fitness_enthusiasts", "young_adults"],
+        "occasions": ["travel", "weekend", "gym"],
+        "style": ["casual", "rugged", "functional"],
+        "suitable_for": ["short_trips", "overnight_travel", "gym_carry"],
+        "not_suitable_for": ["daily_office_carry", "formal_occasions", "air_cabin_carry"],
+        "characteristics": {
+          "capacity_litres": 45,
+          "material": "polyester",
+          "water_resistance": true,
+          "wheels": false,
+          "cabin_compatible": false,
+          "compartments": 2,
+          "durability": "high"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": ["urs_acc_004"],
+        "complements": ["urs_acc_004"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_acc_004"]
+      },
+      "variants": [
+        {
+          "sku": "URS-BAG-003-OLV",
+          "attributes": { "color": "olive" },
+          "commerce": {
+            "price": { "amount": 2999, "currency": "INR" },
+            "mrp": { "amount": 3499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 15 },
+            "last_updated": "2026-08-17T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-BAG-003-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 2999, "currency": "INR" },
+            "mrp": { "amount": 3499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 10 },
+            "last_updated": "2026-08-17T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 2 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_acc_004",
+      "name": "Compact Packing Cubes Set",
+      "brand": "Urban Store Travel",
+      "category": { "id": "bags", "name": "Bags" },
+      "subcategory": { "id": "travel_accessories", "name": "Travel Accessories" },
+      "description": "Set of 4 compression packing cubes in ripstop nylon, available in small, medium, large, and slim sizes. Designed for organised, space-efficient packing.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Set of four fabric packing cubes in different sizes, laid flat" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "cube-outline" }
+      },
+      "semantic_profile": {
+        "use_cases": ["travel", "packing_organisation"],
+        "audience": ["frequent_travelers", "minimalist_packers"],
+        "occasions": ["travel"],
+        "style": ["functional", "minimal"],
+        "suitable_for": ["suitcase_organisation", "duffel_organisation", "carry_on_packing"],
+        "not_suitable_for": [],
+        "characteristics": {
+          "set_count": 4,
+          "sizes": ["small", "medium", "large", "slim"],
+          "material": "ripstop_nylon",
+          "compression": true,
+          "use_type": "travel_organisation"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": ["urs_bag_003"],
+        "complements": ["urs_bag_003"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_bag_003"]
+      },
+      "variants": [
+        {
+          "sku": "URS-ACC-004-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 899, "currency": "INR" },
+            "mrp": { "amount": 1199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 50 },
+            "last_updated": "2026-08-17T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-ACC-004-NVY",
+          "attributes": { "color": "navy" },
+          "commerce": {
+            "price": { "amount": 899, "currency": "INR" },
+            "mrp": { "amount": 1199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 32 },
+            "last_updated": "2026-08-17T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_tee_001",
+      "name": "Classic Crew Neck Tee",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "t_shirts", "name": "T-Shirts" },
+      "description": "100% cotton regular-fit crew neck t-shirt in a solid colour. A foundational everyday wardrobe piece.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Grey crew neck t-shirt, flat lay on white surface" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "tshirt-crew" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_use", "layering", "casual_outings"],
+        "audience": ["men", "young_adults", "students"],
+        "occasions": ["everyday", "weekend", "casual"],
+        "style": ["classic", "minimal", "casual"],
+        "suitable_for": ["casual_settings", "layering_under_jacket", "everyday_wear"],
+        "not_suitable_for": ["formal_events", "office_formal"],
+        "characteristics": {
+          "fit": "regular",
+          "material": "100%_cotton",
+          "sleeve": "half_sleeve",
+          "pattern": "solid",
+          "weight": "medium",
+          "breathability": "high",
+          "formality": "casual"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_tee_002"],
+        "alternative_to": ["urs_tee_002"],
+        "compatible_with": [],
+        "complements": ["urs_jean_001", "urs_jacket_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_jean_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-TEE-001-GRY-S",
+          "attributes": { "size": "S", "color": "grey" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 45 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-TEE-001-GRY-M",
+          "attributes": { "size": "M", "color": "grey" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 60 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-TEE-001-WHT-M",
+          "attributes": { "size": "M", "color": "white" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 55 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-TEE-001-BLK-M",
+          "attributes": { "size": "M", "color": "black" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 70 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 10 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_tee_002",
+      "name": "Oversized Graphic Tee",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "t_shirts", "name": "T-Shirts" },
+      "description": "Heavyweight cotton oversized t-shirt with a front graphic print. Designed for a relaxed, streetwear-influenced look.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black oversized t-shirt with chest graphic print, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "tshirt-crew" }
+      },
+      "semantic_profile": {
+        "use_cases": ["streetwear", "casual_outings", "daily_use"],
+        "audience": ["men", "young_adults", "streetwear_enthusiasts"],
+        "occasions": ["everyday", "weekend", "casual"],
+        "style": ["streetwear", "contemporary", "relaxed"],
+        "suitable_for": ["casual_settings", "relaxed_styling", "streetwear_looks"],
+        "not_suitable_for": ["formal_events", "office_formal", "smart_casual"],
+        "characteristics": {
+          "fit": "oversized",
+          "material": "100%_cotton",
+          "sleeve": "half_sleeve",
+          "pattern": "graphic_print",
+          "weight": "heavy",
+          "breathability": "medium",
+          "formality": "casual"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_tee_001"],
+        "alternative_to": ["urs_tee_001"],
+        "compatible_with": [],
+        "complements": ["urs_jean_002"],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-TEE-002-BLK-M",
+          "attributes": { "size": "M", "color": "black" },
+          "commerce": {
+            "price": { "amount": 699, "currency": "INR" },
+            "mrp": { "amount": 899, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 45 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-TEE-002-BLK-L",
+          "attributes": { "size": "L", "color": "black" },
+          "commerce": {
+            "price": { "amount": 699, "currency": "INR" },
+            "mrp": { "amount": 899, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 38 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-TEE-002-WHT-L",
+          "attributes": { "size": "L", "color": "white" },
+          "commerce": {
+            "price": { "amount": 699, "currency": "INR" },
+            "mrp": { "amount": 899, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 5 },
+            "last_updated": "2026-08-21T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 10 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shirt_001",
+      "name": "Formal Slim Fit Shirt",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "shirts", "name": "Shirts" },
+      "description": "Slim fit cotton-blend formal shirt with a spread collar and full sleeves. Suited for office environments and formal occasions.",
+      "media": {
+        "primary_image": { "url": "", "alt": "White slim fit formal shirt on a hanger, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "tshirt-v" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "formal_events", "interviews"],
+        "audience": ["professionals", "men"],
+        "occasions": ["work", "formal_event", "interview"],
+        "style": ["classic", "minimal", "professional"],
+        "suitable_for": ["office", "formal_wear", "smart_casual"],
+        "not_suitable_for": ["gym", "casual_daily", "heavy_outdoor_use"],
+        "characteristics": {
+          "fit": "slim",
+          "collar": "spread",
+          "material": "cotton_blend",
+          "sleeve": "full_sleeve",
+          "pattern": "solid",
+          "breathability": "medium",
+          "formality": "high"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_shirt_002"],
+        "alternative_to": ["urs_shirt_002"],
+        "compatible_with": [],
+        "complements": ["urs_jean_001", "urs_belt_001", "urs_shoe_004"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_belt_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-SHIRT-001-WHT-S",
+          "attributes": { "size": "S", "color": "white" },
+          "commerce": {
+            "price": { "amount": 1299, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 20 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHIRT-001-WHT-M",
+          "attributes": { "size": "M", "color": "white" },
+          "commerce": {
+            "price": { "amount": 1299, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 28 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHIRT-001-LBL-M",
+          "attributes": { "size": "M", "color": "light_blue" },
+          "commerce": {
+            "price": { "amount": 1299, "currency": "INR" },
+            "mrp": { "amount": 1799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 22 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_shirt_002",
+      "name": "Linen Casual Shirt",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "shirts", "name": "Shirts" },
+      "description": "Breathable pure linen shirt in a relaxed fit with a button-down collar. Suited for warm-weather casual wear and vacations.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Beige relaxed linen casual shirt on a hanger" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "tshirt-v" }
+      },
+      "semantic_profile": {
+        "use_cases": ["casual_outings", "travel", "vacation"],
+        "audience": ["men", "young_adults"],
+        "occasions": ["weekend", "casual", "vacation", "beach"],
+        "style": ["casual", "relaxed", "contemporary"],
+        "suitable_for": ["warm_weather", "casual_settings", "vacation_wear"],
+        "not_suitable_for": ["formal_events", "cold_weather", "office_formal"],
+        "characteristics": {
+          "fit": "relaxed",
+          "collar": "button_down",
+          "material": "linen",
+          "sleeve": "full_sleeve",
+          "pattern": "solid",
+          "breathability": "very_high",
+          "formality": "smart_casual"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_shirt_001"],
+        "alternative_to": ["urs_shirt_001"],
+        "compatible_with": [],
+        "complements": ["urs_jean_002", "urs_shoe_003"],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-SHIRT-002-BEI-M",
+          "attributes": { "size": "M", "color": "beige" },
+          "commerce": {
+            "price": { "amount": 1099, "currency": "INR" },
+            "mrp": { "amount": 1499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 20 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHIRT-002-BEI-L",
+          "attributes": { "size": "L", "color": "beige" },
+          "commerce": {
+            "price": { "amount": 1099, "currency": "INR" },
+            "mrp": { "amount": 1499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 18 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SHIRT-002-WHT-M",
+          "attributes": { "size": "M", "color": "white" },
+          "commerce": {
+            "price": { "amount": 1099, "currency": "INR" },
+            "mrp": { "amount": 1499, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 4 },
+            "last_updated": "2026-08-19T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_jean_001",
+      "name": "Slim Fit Denim Jeans",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "jeans", "name": "Jeans" },
+      "description": "Slim fit stretch denim jeans in a dark indigo wash. Versatile for both casual and smart-casual settings.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Dark indigo slim fit stretch jeans, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "pants" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_use", "office_casual", "casual_outings"],
+        "audience": ["men", "young_adults", "professionals"],
+        "occasions": ["everyday", "weekend", "smart_casual", "office_casual"],
+        "style": ["classic", "minimal", "smart_casual"],
+        "suitable_for": ["casual_settings", "smart_casual", "office_casual"],
+        "not_suitable_for": ["formal_events", "heavy_outdoor_activities"],
+        "characteristics": {
+          "fit": "slim",
+          "rise": "mid",
+          "wash": "dark_indigo",
+          "stretch": true,
+          "material": "stretch_denim",
+          "weight": "medium"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_jean_002"],
+        "alternative_to": ["urs_jean_002"],
+        "compatible_with": [],
+        "complements": ["urs_tee_001", "urs_shirt_001", "urs_belt_001", "urs_shoe_004"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_belt_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-JEAN-001-IND-30",
+          "attributes": { "size": "30", "color": "indigo" },
+          "commerce": {
+            "price": { "amount": 1799, "currency": "INR" },
+            "mrp": { "amount": 2199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 18 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-JEAN-001-IND-32",
+          "attributes": { "size": "32", "color": "indigo" },
+          "commerce": {
+            "price": { "amount": 1799, "currency": "INR" },
+            "mrp": { "amount": 2199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 25 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-JEAN-001-IND-34",
+          "attributes": { "size": "34", "color": "indigo" },
+          "commerce": {
+            "price": { "amount": 1799, "currency": "INR" },
+            "mrp": { "amount": 2199, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 3 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_jean_002",
+      "name": "Relaxed Fit Jeans",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "jeans", "name": "Jeans" },
+      "description": "Relaxed fit jeans in a light wash denim. Designed for all-day comfort with a casual, easy-going silhouette.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Light wash relaxed fit jeans laid flat" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "pants" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_use", "casual_outings", "weekend"],
+        "audience": ["men", "young_adults"],
+        "occasions": ["everyday", "weekend", "casual"],
+        "style": ["casual", "relaxed", "streetwear"],
+        "suitable_for": ["casual_settings", "all_day_comfort"],
+        "not_suitable_for": ["formal_events", "office_formal"],
+        "characteristics": {
+          "fit": "relaxed",
+          "rise": "mid",
+          "wash": "light",
+          "stretch": false,
+          "material": "denim",
+          "weight": "medium"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_jean_001"],
+        "alternative_to": ["urs_jean_001"],
+        "compatible_with": [],
+        "complements": ["urs_tee_002", "urs_shirt_002", "urs_shoe_003"],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-JEAN-002-LGT-30",
+          "attributes": { "size": "30", "color": "light_blue" },
+          "commerce": {
+            "price": { "amount": 1599, "currency": "INR" },
+            "mrp": { "amount": 1999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 22 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-JEAN-002-LGT-32",
+          "attributes": { "size": "32", "color": "light_blue" },
+          "commerce": {
+            "price": { "amount": 1599, "currency": "INR" },
+            "mrp": { "amount": 1999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 18 },
+            "last_updated": "2026-08-18T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_jacket_001",
+      "name": "Bomber Jacket",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "jackets", "name": "Jackets" },
+      "description": "Classic bomber jacket with ribbed cuffs, hem, and collar. Water-resistant polyester shell suitable for transitional weather.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Navy blue bomber jacket, front view on mannequin" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "coat-rack" }
+      },
+      "semantic_profile": {
+        "use_cases": ["casual_outings", "layering", "travel"],
+        "audience": ["men", "young_adults"],
+        "occasions": ["everyday", "weekend", "casual", "travel"],
+        "style": ["classic", "streetwear", "contemporary"],
+        "suitable_for": ["cool_weather", "transitional_seasons", "casual_layering"],
+        "not_suitable_for": ["formal_events", "heavy_rain", "extreme_cold"],
+        "characteristics": {
+          "fit": "regular",
+          "material": "polyester_shell",
+          "insulation": "light",
+          "weather_resistance": "light_water_resistant",
+          "layering": "outer_layer",
+          "formality": "casual"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_tee_001", "urs_jean_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_tee_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-JACKET-001-NVY-M",
+          "attributes": { "size": "M", "color": "navy" },
+          "commerce": {
+            "price": { "amount": 2499, "currency": "INR" },
+            "mrp": { "amount": 2999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 14 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-JACKET-001-BLK-M",
+          "attributes": { "size": "M", "color": "black" },
+          "commerce": {
+            "price": { "amount": 2499, "currency": "INR" },
+            "mrp": { "amount": 2999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 11 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-JACKET-001-NVY-L",
+          "attributes": { "size": "L", "color": "navy" },
+          "commerce": {
+            "price": { "amount": 2499, "currency": "INR" },
+            "mrp": { "amount": 2999, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 3 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_dress_001",
+      "name": "Floral Summer Dress",
+      "brand": "Urban Store Essentials",
+      "category": { "id": "fashion", "name": "Fashion" },
+      "subcategory": { "id": "dresses", "name": "Dresses" },
+      "description": "Lightweight floral print dress in a flared silhouette made from breathable rayon. Suited for daytime events and warm-weather occasions.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Yellow floral print flared summer dress, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "hanger" }
+      },
+      "semantic_profile": {
+        "use_cases": ["casual_outings", "vacation", "daytime_events"],
+        "audience": ["women", "young_adults"],
+        "occasions": ["casual", "vacation", "brunch", "daytime_event"],
+        "style": ["casual", "feminine", "contemporary"],
+        "suitable_for": ["warm_weather", "casual_occasions", "daytime_wear"],
+        "not_suitable_for": ["formal_evening_events", "cold_weather", "office_formal"],
+        "characteristics": {
+          "fit": "flared",
+          "length": "midi",
+          "material": "rayon",
+          "pattern": "floral_print",
+          "season": "summer",
+          "formality": "casual"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_sun_002"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_sun_002"]
+      },
+      "variants": [
+        {
+          "sku": "URS-DRESS-001-YEL-S",
+          "attributes": { "size": "S", "color": "yellow_floral" },
+          "commerce": {
+            "price": { "amount": 1899, "currency": "INR" },
+            "mrp": { "amount": 2399, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 16 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-DRESS-001-YEL-M",
+          "attributes": { "size": "M", "color": "yellow_floral" },
+          "commerce": {
+            "price": { "amount": 1899, "currency": "INR" },
+            "mrp": { "amount": 2399, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 14 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-DRESS-001-BLU-M",
+          "attributes": { "size": "M", "color": "blue_floral" },
+          "commerce": {
+            "price": { "amount": 1899, "currency": "INR" },
+            "mrp": { "amount": 2399, "currency": "INR" },
+            "availability": { "status": "out_of_stock", "quantity_available": 0 },
+            "last_updated": "2026-08-16T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": true, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_watch_001",
+      "name": "Minimal Steel Watch",
+      "brand": "Urban Store Timepieces",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "watches", "name": "Watches" },
+      "description": "Minimalist quartz watch with a stainless steel case and integrated steel strap. Suited for professional and everyday wear.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Silver minimalist dial watch with stainless steel strap, flat lay" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "watch" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "everyday", "formal_events", "gifting"],
+        "audience": ["young_adults", "professionals", "men", "gift_buyers"],
+        "occasions": ["work", "formal_event", "everyday", "gifting"],
+        "style": ["minimal", "contemporary", "classic"],
+        "suitable_for": ["office", "smart_casual", "formal_wear"],
+        "not_suitable_for": ["swimming", "heavy_sports", "extreme_outdoor"],
+        "characteristics": {
+          "movement": "quartz",
+          "case_material": "stainless_steel",
+          "strap_material": "stainless_steel",
+          "case_size_mm": 40,
+          "display_type": "analog",
+          "water_resistance_m": 50,
+          "style": "minimal"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_watch_002"],
+        "alternative_to": ["urs_watch_002"],
+        "compatible_with": ["urs_acc_001"],
+        "complements": ["urs_acc_001", "urs_shirt_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_acc_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-WATCH-001-SLV",
+          "attributes": { "color": "silver" },
+          "commerce": {
+            "price": { "amount": 4499, "currency": "INR" },
+            "mrp": { "amount": 5499, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 10 },
+            "last_updated": "2026-08-15T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-WATCH-001-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 4499, "currency": "INR" },
+            "mrp": { "amount": 5499, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 3 },
+            "last_updated": "2026-08-15T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 2 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_watch_002",
+      "name": "Chrono Sports Watch",
+      "brand": "Urban Store Timepieces",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "watches", "name": "Watches" },
+      "description": "Rugged chronograph sports watch with a high water resistance rating and a durable silicone strap. Built for active daily use.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black sports chronograph watch with silicone strap, front view" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "watch" }
+      },
+      "semantic_profile": {
+        "use_cases": ["sports", "gym", "outdoor_activities", "everyday"],
+        "audience": ["fitness_enthusiasts", "young_adults", "men"],
+        "occasions": ["training", "everyday", "outdoor_activity"],
+        "style": ["sporty", "rugged", "modern"],
+        "suitable_for": ["active_lifestyle", "swimming", "gym", "outdoor_use"],
+        "not_suitable_for": ["formal_events", "office_formal"],
+        "characteristics": {
+          "movement": "quartz",
+          "case_material": "plastic_composite",
+          "strap_material": "silicone",
+          "case_size_mm": 44,
+          "display_type": "analog_digital",
+          "water_resistance_m": 100,
+          "style": "sporty"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_watch_001"],
+        "alternative_to": ["urs_watch_001"],
+        "compatible_with": [],
+        "complements": [],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-WATCH-002-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 3999, "currency": "INR" },
+            "mrp": { "amount": 4999, "currency": "INR" },
+            "availability": { "status": "out_of_stock", "quantity_available": 0 },
+            "last_updated": "2026-08-22T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-WATCH-002-RED",
+          "attributes": { "color": "red" },
+          "commerce": {
+            "price": { "amount": 3999, "currency": "INR" },
+            "mrp": { "amount": 4999, "currency": "INR" },
+            "availability": { "status": "preorder", "quantity_available": 0 },
+            "last_updated": "2026-08-22T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 2 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_acc_001",
+      "name": "Leather Watch Strap - Brown",
+      "brand": "Urban Store Accessories",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "watch_straps", "name": "Watch Straps" },
+      "description": "Genuine leather replacement watch strap in brown, with a stainless steel pin buckle. Compatible with any standard 20mm lug watch.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Brown genuine leather watch strap with pin buckle, flat lay" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "watch-variant" }
+      },
+      "semantic_profile": {
+        "use_cases": ["watch_customisation", "watch_replacement"],
+        "audience": ["watch_owners", "men", "gift_buyers"],
+        "occasions": ["everyday", "gifting"],
+        "style": ["classic", "elegant", "minimal"],
+        "suitable_for": ["formal_watches", "dress_watches", "minimal_watches"],
+        "not_suitable_for": ["sports_watches", "diving_watches"],
+        "characteristics": {
+          "material": "genuine_leather",
+          "width_mm": 20,
+          "buckle_type": "pin_buckle",
+          "compatibility": "20mm_lug_width",
+          "color": "brown"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": ["urs_watch_001"],
+        "complements": ["urs_watch_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_watch_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-ACC-001-BRN",
+          "attributes": { "color": "brown" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 35 },
+            "last_updated": "2026-08-15T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-ACC-001-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 599, "currency": "INR" },
+            "mrp": { "amount": 799, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 28 },
+            "last_updated": "2026-08-15T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_wallet_001",
+      "name": "Slim Bifold Leather Wallet",
+      "brand": "Urban Store Accessories",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "wallets", "name": "Wallets" },
+      "description": "Slim bifold wallet in genuine leather with 6 card slots, a cash compartment, and a coin pocket. Designed for everyday carry.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Brown slim bifold leather wallet open showing card slots" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "wallet-outline" }
+      },
+      "semantic_profile": {
+        "use_cases": ["daily_use", "gifting"],
+        "audience": ["men", "professionals", "gift_buyers"],
+        "occasions": ["everyday", "gifting"],
+        "style": ["classic", "minimal", "professional"],
+        "suitable_for": ["professional_use", "casual_use", "gifting"],
+        "not_suitable_for": [],
+        "characteristics": {
+          "material": "genuine_leather",
+          "card_capacity": 6,
+          "cash_compartment": true,
+          "coin_compartment": true,
+          "formality": "smart_casual",
+          "RFID": false
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_bag_001", "urs_belt_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_belt_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-WALLET-001-BRN",
+          "attributes": { "color": "brown" },
+          "commerce": {
+            "price": { "amount": 899, "currency": "INR" },
+            "mrp": { "amount": 1199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 40 },
+            "last_updated": "2026-08-14T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-WALLET-001-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 899, "currency": "INR" },
+            "mrp": { "amount": 1199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 33 },
+            "last_updated": "2026-08-14T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_belt_001",
+      "name": "Classic Leather Belt",
+      "brand": "Urban Store Accessories",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "belts", "name": "Belts" },
+      "description": "Classic genuine leather belt with a polished silver pin buckle. Suitable for both formal and smart-casual outfits.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Black genuine leather belt with polished silver pin buckle" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "belt" }
+      },
+      "semantic_profile": {
+        "use_cases": ["office", "daily_use", "formal_events"],
+        "audience": ["men", "professionals"],
+        "occasions": ["work", "everyday", "formal_event"],
+        "style": ["classic", "minimal", "professional"],
+        "suitable_for": ["formal_outfits", "smart_casual", "office_wear"],
+        "not_suitable_for": ["casual_streetwear", "sports"],
+        "characteristics": {
+          "material": "genuine_leather",
+          "width_mm": 35,
+          "buckle_type": "pin_buckle",
+          "size_range": "28_to_42",
+          "style": "classic",
+          "formality": "smart_casual_to_formal"
+        }
+      },
+      "relationships": {
+        "similar_to": [],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_jean_001", "urs_shirt_001", "urs_shoe_004", "urs_wallet_001"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_wallet_001", "urs_jean_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-BELT-001-BLK",
+          "attributes": { "color": "black" },
+          "commerce": {
+            "price": { "amount": 799, "currency": "INR" },
+            "mrp": { "amount": 999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 33 },
+            "last_updated": "2026-08-14T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-BELT-001-BRN",
+          "attributes": { "color": "brown" },
+          "commerce": {
+            "price": { "amount": 799, "currency": "INR" },
+            "mrp": { "amount": 999, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 27 },
+            "last_updated": "2026-08-14T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_sun_001",
+      "name": "Classic Aviator Sunglasses",
+      "brand": "Urban Store Accessories",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "sunglasses", "name": "Sunglasses" },
+      "description": "Classic teardrop aviator sunglasses with polarized UV400 lenses and a gold metal frame. Timeless everyday eyewear.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Gold frame classic aviator sunglasses with polarized lenses" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "sunglasses" }
+      },
+      "semantic_profile": {
+        "use_cases": ["everyday", "outdoor_activities", "travel"],
+        "audience": ["men", "women", "young_adults"],
+        "occasions": ["everyday", "travel", "outdoor", "casual"],
+        "style": ["classic", "retro", "minimal"],
+        "suitable_for": ["sunny_weather", "outdoor_use", "everyday_wear"],
+        "not_suitable_for": ["low_light_conditions", "indoor_use"],
+        "characteristics": {
+          "frame_shape": "aviator",
+          "frame_material": "metal",
+          "lens_type": "polarized",
+          "UV_protection": "UV400",
+          "polarization": true,
+          "style": "classic"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_sun_002"],
+        "alternative_to": ["urs_sun_002"],
+        "compatible_with": [],
+        "complements": [],
+        "upgrade_to": [],
+        "frequently_bought_with": []
+      },
+      "variants": [
+        {
+          "sku": "URS-SUN-001-GLD-BRN",
+          "attributes": { "frame_color": "gold", "lens_color": "brown" },
+          "commerce": {
+            "price": { "amount": 1299, "currency": "INR" },
+            "mrp": { "amount": 1699, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 27 },
+            "last_updated": "2026-08-13T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SUN-001-SLV-GRY",
+          "attributes": { "frame_color": "silver", "lens_color": "grey" },
+          "commerce": {
+            "price": { "amount": 1299, "currency": "INR" },
+            "mrp": { "amount": 1699, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 19 },
+            "last_updated": "2026-08-13T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_sun_002",
+      "name": "Round Retro Sunglasses",
+      "brand": "Urban Store Accessories",
+      "category": { "id": "accessories", "name": "Accessories" },
+      "subcategory": { "id": "sunglasses", "name": "Sunglasses" },
+      "description": "Round retro-style sunglasses with a lightweight thin metal frame and UV-protective lenses. Suited for casual and vacation wear.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Tortoiseshell round retro sunglasses with thin metal frame" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "sunglasses" }
+      },
+      "semantic_profile": {
+        "use_cases": ["casual_outings", "vacation", "everyday"],
+        "audience": ["men", "women", "young_adults"],
+        "occasions": ["casual", "vacation", "weekend", "beach"],
+        "style": ["retro", "casual", "contemporary"],
+        "suitable_for": ["casual_styling", "vacation_wear", "sunny_weather"],
+        "not_suitable_for": ["formal_occasions", "sports", "low_light_conditions"],
+        "characteristics": {
+          "frame_shape": "round",
+          "frame_material": "metal",
+          "lens_type": "standard_UV",
+          "UV_protection": "UV400",
+          "polarization": false,
+          "style": "retro"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_sun_001"],
+        "alternative_to": ["urs_sun_001"],
+        "compatible_with": [],
+        "complements": ["urs_dress_001"],
+        "upgrade_to": ["urs_sun_001"],
+        "frequently_bought_with": ["urs_dress_001"]
+      },
+      "variants": [
+        {
+          "sku": "URS-SUN-002-TRT-BRN",
+          "attributes": { "frame_color": "tortoiseshell", "lens_color": "brown" },
+          "commerce": {
+            "price": { "amount": 999, "currency": "INR" },
+            "mrp": { "amount": 1399, "currency": "INR" },
+            "availability": { "status": "preorder", "quantity_available": 0 },
+            "last_updated": "2026-08-22T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-SUN-002-BLK-BLK",
+          "attributes": { "frame_color": "black", "lens_color": "black" },
+          "commerce": {
+            "price": { "amount": 999, "currency": "INR" },
+            "mrp": { "amount": 1399, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 15 },
+            "last_updated": "2026-08-22T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 3 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_gift_001",
+      "name": "Scented Candle Gift Set",
+      "brand": "Urban Store Home",
+      "category": { "id": "lifestyle", "name": "Lifestyle" },
+      "subcategory": { "id": "gifting", "name": "Gifting" },
+      "description": "Set of 3 hand-poured soy-wax scented candles in a gift-ready kraft box. Available in lavender, sandalwood, and citrus scents.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Three scented candles in a kraft gift box with ribbon" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "candle" }
+      },
+      "semantic_profile": {
+        "use_cases": ["gifting", "home_decor", "self_care"],
+        "audience": ["gift_buyers", "home_decor_enthusiasts"],
+        "occasions": ["birthday", "housewarming", "festive", "gifting"],
+        "style": ["minimal", "contemporary"],
+        "suitable_for": ["birthday_gifting", "housewarming_gift", "festive_gifting"],
+        "not_suitable_for": ["children_under_10"],
+        "characteristics": {
+          "set_count": 3,
+          "wax_type": "soy",
+          "scents": ["lavender", "sandalwood", "citrus"],
+          "gift_packaging": true,
+          "presentation": "kraft_box_with_ribbon"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_gift_002"],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_gift_002"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_gift_002"]
+      },
+      "variants": [
+        {
+          "sku": "URS-GIFT-001-SET",
+          "attributes": { "scent_set": "lavender_sandalwood_citrus" },
+          "commerce": {
+            "price": { "amount": 899, "currency": "INR" },
+            "mrp": { "amount": 1199, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 38 },
+            "last_updated": "2026-08-12T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 5 }
+    }
+  },
+  {
+    "merchant_id": "urban_store",
+    "product": {
+      "id": "urs_gift_002",
+      "name": "Leather Travel Journal",
+      "brand": "Urban Store Home",
+      "category": { "id": "lifestyle", "name": "Lifestyle" },
+      "subcategory": { "id": "gifting", "name": "Gifting" },
+      "description": "Handbound full-grain leather-cover travel journal with 200 acid-free unruled pages and a ribbon bookmark. Suited for travel writing and gifting.",
+      "media": {
+        "primary_image": { "url": "", "alt": "Brown leather-bound travel journal with ribbon bookmark, closed" },
+        "gallery": [],
+        "icon": { "provider": "iconify", "collection": "mdi", "name": "notebook-outline" }
+      },
+      "semantic_profile": {
+        "use_cases": ["gifting", "journaling", "travel"],
+        "audience": ["writers", "travelers", "gift_buyers"],
+        "occasions": ["birthday", "travel", "gifting", "graduation"],
+        "style": ["classic", "premium", "minimal"],
+        "suitable_for": ["writers", "travelers", "journal_keepers", "thoughtful_gifting"],
+        "not_suitable_for": ["young_children"],
+        "characteristics": {
+          "cover_material": "full_grain_leather",
+          "page_count": 200,
+          "page_type": "unruled",
+          "paper_quality": "acid_free",
+          "bookmark": true,
+          "gift_packaging": true,
+          "presentation": "sleeve_packaging"
+        }
+      },
+      "relationships": {
+        "similar_to": ["urs_gift_001"],
+        "alternative_to": [],
+        "compatible_with": [],
+        "complements": ["urs_bag_003"],
+        "upgrade_to": [],
+        "frequently_bought_with": ["urs_bag_003"]
+      },
+      "variants": [
+        {
+          "sku": "URS-GIFT-002-BRN",
+          "attributes": { "color": "brown" },
+          "commerce": {
+            "price": { "amount": 699, "currency": "INR" },
+            "mrp": { "amount": 899, "currency": "INR" },
+            "availability": { "status": "in_stock", "quantity_available": 42 },
+            "last_updated": "2026-08-12T09:00:00Z"
+          }
+        },
+        {
+          "sku": "URS-GIFT-002-TAN",
+          "attributes": { "color": "tan" },
+          "commerce": {
+            "price": { "amount": 699, "currency": "INR" },
+            "mrp": { "amount": 899, "currency": "INR" },
+            "availability": { "status": "low_stock", "quantity_available": 4 },
+            "last_updated": "2026-08-12T09:00:00Z"
+          }
+        }
+      ],
+      "purchase_constraints": { "requires_variant_selection": false, "max_quantity_per_order": 5 }
+    }
+  }
+]

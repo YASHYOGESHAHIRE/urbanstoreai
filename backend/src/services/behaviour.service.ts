@@ -28,7 +28,7 @@ export async function trackBehaviour(params: TrackParams): Promise<void> {
         productId: params.productId ?? null,
         categoryId: params.categoryId ?? null,
         query: params.query ?? null,
-        metadata: params.metadata ?? {},
+        metadata: (params.metadata ?? {}) as object,
       },
     });
   } catch {

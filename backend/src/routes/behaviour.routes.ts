@@ -23,7 +23,7 @@ export async function behaviourRoutes(app: FastifyInstance) {
         productId: z.string().optional(),
         categoryId: z.string().optional(),
         query: z.string().optional(),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }).safeParse(request.body);
 
       if (!body.success) {

@@ -1,23 +1,16 @@
 /**
  * MCP (Model Context Protocol) server for Urban Store.
  *
- * Exposes shopping tools that Claude can call on behalf of authenticated users.
- * Transport: Streamable HTTP at POST /mcp  (MCP 2026-07-28 spec)
+ * Transport: Streamable HTTP at POST /mcp
  * Auth:      OAuth 2.0 Bearer token — same tokens issued by /oauth/token
  *
- * Tools exposed:
- *   search_catalog      — semantic/keyword product search
- *   get_product         — full product + variant details
- *   get_cart            — view current cart
- *   add_to_cart         — add a product variant to cart
- *   remove_from_cart    — remove an item from cart
- *   create_checkout     — create Razorpay order from cart
- *   get_orders          — list past orders
+ * Tools: search_catalog, get_product, get_cart, add_to_cart,
+ *        remove_from_cart, create_checkout, get_orders
  */
 
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { McpServer } from "@modelcontextprotocol/server";
-import { fastifyMcpPlugin } from "@modelcontextprotocol/fastify";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import * as z from "zod/v4";
 import { getUserFromToken } from "../services/auth.service.js";
 import { searchProducts, getProduct } from "../services/catalog.service.js";
@@ -29,13 +22,11 @@ import { prisma } from "../db/prisma.js";
 
 async function getUserFromRequest(request: FastifyRequest) {
   const auth = request.headers.authorization;
-  if (auth?.startsWith("Bearer ")) {
-    return getUserFromToken(auth.slice(7));
-  }
+  if (auth?.startsWith("Bearer ")) return getUserFromToken(auth.slice(7));
   return null;
 }
 
-// ─── Build MCP server instance ────────────────────────────────────────────────
+// ─── Build MCP server (one instance, stateless per-request transport) ─────────
 
 function buildMcpServer() {
   const server = new McpServer({ name: "urban-store", version: "1.0.0" });
@@ -44,29 +35,19 @@ function buildMcpServer() {
   server.registerTool(
     "search_catalog",
     {
-      description:
-        "Search Urban Store's product catalogue. Use natural language queries like 'minimal laptop bag under 3000' or filter by category, price range, and availability. Returns up to 10 products with prices, variants, and stock status.",
+      description: "Search Urban Store's product catalogue. Supports natural language queries like 'minimal laptop bag under 3000'. Filter by category, price range, and availability.",
       inputSchema: {
-        query:        z.string().optional().describe("Natural language search query, e.g. 'running shoes for trail'"),
-        category:     z.enum(["footwear", "bags", "fashion", "accessories", "lifestyle"]).optional().describe("Filter by category"),
+        query:        z.string().optional().describe("Natural language search query"),
+        category:     z.enum(["footwear", "bags", "fashion", "accessories", "lifestyle"]).optional(),
         minPrice:     z.number().optional().describe("Minimum price in INR"),
         maxPrice:     z.number().optional().describe("Maximum price in INR"),
-        availability: z.enum(["in_stock", "low_stock"]).optional().describe("Filter by stock status"),
-        limit:        z.number().min(1).max(20).default(10).describe("Number of results to return"),
+        availability: z.enum(["in_stock", "low_stock"]).optional(),
+        limit:        z.number().min(1).max(20).default(10),
       },
     },
     async ({ query, category, minPrice, maxPrice, availability, limit }) => {
       const result = await searchProducts({ query, category, minPrice, maxPrice, availability, limit });
-      return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify({
-            total: result.total,
-            searchMode: result.searchMode,
-            products: result.products,
-          }, null, 2),
-        }],
-      };
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     }
   );
 
@@ -74,17 +55,12 @@ function buildMcpServer() {
   server.registerTool(
     "get_product",
     {
-      description:
-        "Get full details of a specific product by its ID, including all variants, sizes, colours, prices, and real-time stock availability.",
-      inputSchema: {
-        productId: z.string().describe("Product ID, e.g. 'urs_bag_001'"),
-      },
+      description: "Get full product details by ID — all variants, sizes, colours, prices, and stock.",
+      inputSchema: { productId: z.string().describe("Product ID e.g. 'urs_bag_001'") },
     },
     async ({ productId }) => {
       const product = await getProduct(productId);
-      if (!product) {
-        return { content: [{ type: "text" as const, text: JSON.stringify({ error: "Product not found" }) }] };
-      }
+      if (!product) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "Not found" }) }] };
       return { content: [{ type: "text" as const, text: JSON.stringify(product, null, 2) }] };
     }
   );
@@ -92,15 +68,12 @@ function buildMcpServer() {
   // ── get_cart ────────────────────────────────────────────────────────────────
   server.registerTool(
     "get_cart",
-    {
-      description: "Get the current user's shopping cart — items, quantities, prices, subtotal, and savings.",
-    },
+    { description: "Get the current user's shopping cart — items, quantities, prices, and subtotal." },
     async (_args, context) => {
-      const request = (context as { request?: FastifyRequest }).request;
-      if (!request) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
-      const user = await getUserFromRequest(request);
+      const req = (context as { request?: FastifyRequest }).request;
+      if (!req) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
+      const user = await getUserFromRequest(req);
       if (!user) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "UNAUTHORIZED" }) }] };
-
       const cart = await getOrCreateCart(user.id);
       return { content: [{ type: "text" as const, text: JSON.stringify(cart, null, 2) }] };
     }
@@ -110,20 +83,18 @@ function buildMcpServer() {
   server.registerTool(
     "add_to_cart",
     {
-      description:
-        "Add a product variant to the user's cart. You must specify the exact variantSku from get_product. Always confirm the product name and price with the user before calling this.",
+      description: "Add a product variant to the user's cart. Always confirm product name and price with the user before calling this.",
       inputSchema: {
         productId:  z.string().describe("Product ID"),
-        variantSku: z.string().describe("Exact variant SKU from get_product, e.g. 'URS-BAG-001-GRY'"),
-        quantity:   z.number().min(1).max(5).default(1).describe("Quantity to add (max 5)"),
+        variantSku: z.string().describe("Exact variant SKU from get_product"),
+        quantity:   z.number().min(1).max(5).default(1),
       },
     },
     async ({ productId, variantSku, quantity }, context) => {
-      const request = (context as { request?: FastifyRequest }).request;
-      if (!request) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
-      const user = await getUserFromRequest(request);
+      const req = (context as { request?: FastifyRequest }).request;
+      if (!req) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
+      const user = await getUserFromRequest(req);
       if (!user) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "UNAUTHORIZED" }) }] };
-
       try {
         const cart = await addToCart(user.id, productId, variantSku, quantity);
         return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, cart }, null, 2) }] };
@@ -137,17 +108,14 @@ function buildMcpServer() {
   server.registerTool(
     "remove_from_cart",
     {
-      description: "Remove an item from the user's cart by its cart item ID (visible in get_cart response).",
-      inputSchema: {
-        itemId: z.string().describe("Cart item ID from get_cart response"),
-      },
+      description: "Remove an item from the cart by its item ID (from get_cart).",
+      inputSchema: { itemId: z.string().describe("Cart item ID from get_cart") },
     },
     async ({ itemId }, context) => {
-      const request = (context as { request?: FastifyRequest }).request;
-      if (!request) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
-      const user = await getUserFromRequest(request);
+      const req = (context as { request?: FastifyRequest }).request;
+      if (!req) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
+      const user = await getUserFromRequest(req);
       if (!user) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "UNAUTHORIZED" }) }] };
-
       try {
         const cart = await removeFromCart(user.id, itemId);
         return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, cart }, null, 2) }] };
@@ -160,16 +128,12 @@ function buildMcpServer() {
   // ── create_checkout ─────────────────────────────────────────────────────────
   server.registerTool(
     "create_checkout",
-    {
-      description:
-        "Create a checkout session from the user's current cart and return a Razorpay payment link. IMPORTANT: Always show the user the full cart contents and total price and get explicit confirmation before calling this tool.",
-    },
+    { description: "Create a checkout and Razorpay order from the user's cart. ALWAYS show the cart total and get explicit user confirmation before calling this." },
     async (_args, context) => {
-      const request = (context as { request?: FastifyRequest }).request;
-      if (!request) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
-      const user = await getUserFromRequest(request);
+      const req = (context as { request?: FastifyRequest }).request;
+      if (!req) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
+      const user = await getUserFromRequest(req);
       if (!user) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "UNAUTHORIZED" }) }] };
-
       try {
         const result = await createCheckout(user.id);
         return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
@@ -183,34 +147,26 @@ function buildMcpServer() {
   server.registerTool(
     "get_orders",
     {
-      description: "Get the user's past orders — order IDs, items purchased, totals, status, and dates.",
-      inputSchema: {
-        limit: z.number().min(1).max(20).default(10).describe("Number of orders to return"),
-      },
+      description: "Get the user's past orders — IDs, items, totals, status, and dates.",
+      inputSchema: { limit: z.number().min(1).max(20).default(10) },
     },
     async ({ limit }, context) => {
-      const request = (context as { request?: FastifyRequest }).request;
-      if (!request) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
-      const user = await getUserFromRequest(request);
+      const req = (context as { request?: FastifyRequest }).request;
+      if (!req) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "No request context" }) }] };
+      const user = await getUserFromRequest(req);
       if (!user) return { content: [{ type: "text" as const, text: JSON.stringify({ error: "UNAUTHORIZED" }) }] };
-
       const orders = await prisma.order.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },
         take: limit,
         select: { id: true, status: true, total: true, itemsJson: true, createdAt: true },
       });
-
       return {
         content: [{
           type: "text" as const,
           text: JSON.stringify(orders.map((o) => ({
-            id: o.id,
-            status: o.status,
-            total: o.total,
-            currency: "INR",
-            items: o.itemsJson,
-            createdAt: o.createdAt,
+            id: o.id, status: o.status, total: o.total,
+            currency: "INR", items: o.itemsJson, createdAt: o.createdAt,
           })), null, 2),
         }],
       };
@@ -220,13 +176,36 @@ function buildMcpServer() {
   return server;
 }
 
-// ─── Register Fastify plugin ──────────────────────────────────────────────────
+// ─── Register routes ──────────────────────────────────────────────────────────
+
+const mcpServer = buildMcpServer();
 
 export async function mcpRoutes(app: FastifyInstance) {
-  const mcpServer = buildMcpServer();
 
-  await app.register(fastifyMcpPlugin, {
-    mcpServer,
-    path: "/mcp",
+  // POST /mcp — main MCP endpoint (Streamable HTTP)
+  app.post("/mcp", async (request, reply) => {
+    const transport = new NodeStreamableHTTPServerTransport({
+      sessionIdGenerator: undefined, // stateless
+    });
+
+    reply.raw.on("close", () => transport.close());
+
+    // Pass the original request object so tools can access auth headers
+    await mcpServer.connect(transport);
+    await transport.handleRequest(request.raw, reply.raw, request.body);
+  });
+
+  // GET /mcp — required: return 405 with JSON-RPC error for non-POST
+  app.get("/mcp", async (_request, reply) => {
+    return reply.code(405).send({
+      jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed. Use POST." }, id: null,
+    });
+  });
+
+  // DELETE /mcp — same
+  app.delete("/mcp", async (_request, reply) => {
+    return reply.code(405).send({
+      jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed. Use POST." }, id: null,
+    });
   });
 }

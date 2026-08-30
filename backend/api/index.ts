@@ -1,16 +1,10 @@
 /**
  * Vercel serverless entry point for the Urban Store Fastify backend.
- *
- * This file is ONLY used by Vercel. Local development still uses server.ts
- * (which calls app.listen()). Do not import server.ts here.
- *
- * Key differences from server.ts:
- *  - No app.listen() — Vercel invokes the handler directly
- *  - No in-memory rate limiting — stateless per invocation
- *  - Everything else (routes, middleware, Prisma) is identical
+ * Local dev still uses src/server.ts (app.listen). This file is Vercel-only.
  */
 
-import Fastify, { FastifyRequest, FastifyReply } from "fastify";
+import type { IncomingMessage, ServerResponse } from "http";
+import Fastify from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyCors from "@fastify/cors";
 import { authRoutes } from "../src/routes/auth.routes.js";
@@ -32,28 +26,20 @@ declare module "fastify" {
 }
 
 const app = Fastify({ logger: false });
+let ready = false;
 
-let isReady = false;
-
-async function build() {
-  if (isReady) return;
+async function build(): Promise<void> {
+  if (ready) return;
 
   app.decorate("prisma", prisma);
 
-  // Allow empty JSON bodies
   app.addContentTypeParser(
     "application/json",
     { parseAs: "string" },
-    function (_req, body, done) {
-      if (!body || body === "") {
-        done(null, {});
-        return;
-      }
-      try {
-        done(null, JSON.parse(body as string));
-      } catch (err) {
-        done(err as Error, undefined);
-      }
+    (_req, body, done) => {
+      if (!body || body === "") { done(null, {}); return; }
+      try { done(null, JSON.parse(body as string)); }
+      catch (err) { done(err as Error, undefined); }
     }
   );
 
@@ -70,10 +56,6 @@ async function build() {
     secret: process.env.COOKIE_SECRET ?? "change-me-in-production",
   });
 
-  // NOTE: @fastify/rate-limit intentionally omitted here.
-  // It uses in-memory state which resets on every cold start.
-  // Vercel provides edge-level DDoS protection. Add Upstash Redis
-  // rate limiting here if stricter limits are needed.
   await app.register(authRoutes);
   await app.register(oauthRoutes);
   await app.register(catalogRoutes);
@@ -85,16 +67,18 @@ async function build() {
   await app.register(adminRoutes);
   await app.register(behaviourRoutes);
 
-  app.get("/health", async (_req, reply) => {
-    return reply.send({ status: "ok", timestamp: new Date().toISOString() });
-  });
+  app.get("/health", async (_req, reply) =>
+    reply.send({ status: "ok", timestamp: new Date().toISOString() })
+  );
 
   await app.ready();
-  isReady = true;
+  ready = true;
 }
 
-// Vercel serverless handler
-export default async function handler(req: FastifyRequest["raw"], res: FastifyReply["raw"]) {
+export default async function handler(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   await build();
   app.server.emit("request", req, res);
 }

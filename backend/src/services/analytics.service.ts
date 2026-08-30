@@ -88,7 +88,21 @@ export async function getSlowMovingProducts(days = 30, minStock = 5) {
     include: { variants: true },
   });
 
-  const slow = [];
+  interface SlowProduct {
+    productId: string;
+    name: string;
+    brand: string;
+    categoryId: string;
+    subcategoryId: string;
+    totalStock: number;
+    unitsSold: number;
+    sellThroughRate: number;
+    lockedValue: number;
+    price: number;
+    mrp: number;
+  }
+
+  const slow: SlowProduct[] = [];
   for (const product of allProducts) {
     const totalStock = product.variants.reduce((s, v) => s + v.quantityAvailable, 0);
     if (totalStock < minStock) continue;

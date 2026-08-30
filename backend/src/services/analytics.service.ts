@@ -79,6 +79,20 @@ export async function getTopSellingProducts(limit = 5, days = 30) {
 
 // ─── Slow moving products ─────────────────────────────────────────────────────
 
+export interface SlowProduct {
+  productId: string;
+  name: string;
+  brand: string;
+  categoryId: string;
+  subcategoryId: string;
+  totalStock: number;
+  unitsSold: number;
+  sellThroughRate: number;
+  lockedValue: number;
+  price: number;
+  mrp: number;
+}
+
 export async function getSlowMovingProducts(days = 30, minStock = 5) {
   const velocity = await getProductVelocity(days);
   const soldProductIds = new Set(velocity.map((v) => v.productId));
@@ -87,20 +101,6 @@ export async function getSlowMovingProducts(days = 30, minStock = 5) {
   const allProducts = await prisma.product.findMany({
     include: { variants: true },
   });
-
-  interface SlowProduct {
-    productId: string;
-    name: string;
-    brand: string;
-    categoryId: string;
-    subcategoryId: string;
-    totalStock: number;
-    unitsSold: number;
-    sellThroughRate: number;
-    lockedValue: number;
-    price: number;
-    mrp: number;
-  }
 
   const slow: SlowProduct[] = [];
   for (const product of allProducts) {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   LayoutDashboard, Megaphone, Zap, ArrowLeft, ChevronRight,
 } from "lucide-react";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
@@ -16,7 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminName, setAdminName] = useState("");
 
   useEffect(() => {
-    fetch(`${BACKEND}/auth/me`, { credentials: "include" })
+    fetch(`${BACKEND}/auth/me`, { headers: { ...authHeaders() } })
       .then((r) => r.json())
       .then((data) => {
         if (!data.authenticated) {

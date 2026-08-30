@@ -7,6 +7,7 @@ import {
   ArrowLeft, Send, Mic, Zap, Loader2, ChevronDown, ChevronRight,
   Terminal, Wrench, RotateCcw, ExternalLink, Search, ShoppingCart,
 } from "lucide-react";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
@@ -286,8 +287,7 @@ export default function DevAgentPage() {
     try {
       const res = await fetch(`${BACKEND}/api/v1/agent/chat/debug`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ message: text.trim(), sessionId: sessionId ?? undefined }),
       });
 

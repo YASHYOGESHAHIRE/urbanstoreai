@@ -5,6 +5,7 @@ import {
   TrendingUp, ShoppingCart, Package, Users, AlertTriangle,
   RefreshCw, ArrowUpRight, Boxes, Activity, Zap,
 } from "lucide-react";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch(`${BACKEND}/api/v1/admin/dashboard`, { credentials: "include" });
+      const res = await fetch(`${BACKEND}/api/v1/admin/dashboard`, { headers: { ...authHeaders() } });
       if (res.status === 403) { setError("Admin access required."); return; }
       if (!res.ok) { setError("Failed to load."); return; }
       setData(await res.json());

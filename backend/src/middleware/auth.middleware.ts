@@ -20,11 +20,16 @@ export async function attachUser(
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> {
-  const token = request.cookies?.[COOKIE_NAME];
-  if (!token) {
-    request.user = null;
+  // Try Bearer token first (cross-domain deployments)
+  const authHeader = request.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    request.user = await getUserFromToken(token);
     return;
   }
+  // Fall back to cookie (local dev / same-domain)
+  const token = request.cookies?.[COOKIE_NAME];
+  if (!token) { request.user = null; return; }
   request.user = await getUserFromToken(token);
 }
 

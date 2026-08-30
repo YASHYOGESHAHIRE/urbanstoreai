@@ -61,7 +61,7 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       const { user, sessionToken } = await registerUser(name, email, password);
       reply.setCookie(COOKIE_NAME, sessionToken, cookieOptions(isProd));
-      return reply.code(201).send({ user });
+      return reply.code(201).send({ user, token: sessionToken });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "EMAIL_ALREADY_EXISTS") {
         return reply.code(409).send({ error: "EMAIL_ALREADY_EXISTS" });
@@ -86,7 +86,7 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       const { user, sessionToken } = await loginUser(email, password);
       reply.setCookie(COOKIE_NAME, sessionToken, cookieOptions(isProd));
-      return reply.send({ user });
+      return reply.send({ user, token: sessionToken });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "INVALID_CREDENTIALS") {
         return reply.code(401).send({ error: "INVALID_CREDENTIALS" });

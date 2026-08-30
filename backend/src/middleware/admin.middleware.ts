@@ -10,7 +10,14 @@ export async function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const token = request.cookies?.[COOKIE_NAME];
+  // Accept Bearer token (cross-domain) or cookie (local dev)
+  let token: string | undefined;
+  const authHeader = request.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7);
+  } else {
+    token = request.cookies?.[COOKIE_NAME];
+  }
 
   if (!token) {
     reply.code(401).send({ error: "UNAUTHORIZED" });

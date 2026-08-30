@@ -9,6 +9,7 @@ import {
   TrendingUp, ChevronDown, ChevronRight, Receipt,
 } from "lucide-react";
 import { saveAuditEntries, appendAuditEntry, newAuditSession, AuditEntry } from "@/lib/auditStore";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
@@ -613,8 +614,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
     try {
       const res = await fetch(`${BACKEND}/api/v1/agent/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ message: text.trim(), sessionId: sessionId ?? undefined }),
       });
       const data = await res.json();
@@ -675,8 +675,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
     try {
       const res = await fetch(`${BACKEND}/api/v1/cart/items`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ productId: product.id, variantSku: variant.sku, quantity: 1 }),
       });
 
@@ -702,8 +701,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
       let upsells: ProductData[] = [];
       try {
         const ur = await fetch(`${BACKEND}/api/v1/agent/chat`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({ message: `get_upsell for ${product.id}`, sessionId: sessionId ?? undefined }),
         });
         const ud = await ur.json();
@@ -733,7 +731,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
     appendAuditEntry("POLICY", { event: "gate_shown", requiresConfirmation: true });
     setCheckoutLoading(true);
     try {
-      const res = await fetch(`${BACKEND}/api/v1/cart`, { credentials: "include" });
+      const res = await fetch(`${BACKEND}/api/v1/cart`, { headers: { ...authHeaders() } });
       const cart: CartData = await res.json();
       if (!cart.items?.length) {
         setMessages((prev) => [...prev, { id: Date.now().toString(), role: "ai", text: "Your cart is empty.", time: getTime() }]);
@@ -757,8 +755,8 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
 
     try {
       const res = await fetch(`${BACKEND}/api/v1/checkout`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "include", body: JSON.stringify({}),
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
       });
 
       if (!res.ok) {
@@ -803,8 +801,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
 
     try {
       const res = await fetch(`${BACKEND}/api/v1/checkout/${checkoutId}/confirm`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ razorpayPaymentId: paymentId, razorpaySignature: signature }),
       });
 

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Zap, Shield, Check, X, Loader2 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
@@ -55,7 +56,7 @@ function AuthorizeContent() {
     const state = params.get("state");
     if (state) query.set("state", state);
 
-    fetch(`${BACKEND}/oauth/authorize?${query}`, { credentials: "include" })
+    fetch(`${BACKEND}/oauth/authorize?${query}`, { headers: { ...authHeaders() } })
       .then((r) => r.json())
       .then((data) => {
         if (data.error) setError(data.error);
@@ -71,8 +72,7 @@ function AuthorizeContent() {
     try {
       const res = await fetch(`${BACKEND}/oauth/authorize/approve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           client_id: consent.client.clientId,
           redirect_uri: consent.redirectUri,
@@ -96,8 +96,7 @@ function AuthorizeContent() {
     try {
       const res = await fetch(`${BACKEND}/oauth/authorize/deny`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           redirect_uri: consent.redirectUri,
           state: consent.state,

@@ -6,6 +6,7 @@ import {
   TrendingUp, AlertTriangle, Tag, Zap, Package,
   ChevronDown, ChevronRight, ArrowUpRight,
 } from "lucide-react";
+import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
@@ -267,7 +268,7 @@ export default function CampaignsPage() {
       const url = status && status !== "all"
         ? `${BACKEND}/api/v1/admin/campaigns?status=${status}`
         : `${BACKEND}/api/v1/admin/campaigns`;
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { headers: { ...authHeaders() } });
       if (!res.ok) { setError("Failed to load."); return; }
       const data = await res.json();
       setCampaigns(data.campaigns ?? []);
@@ -281,8 +282,9 @@ export default function CampaignsPage() {
     setGenerating(true); setError("");
     try {
       const res = await fetch(`${BACKEND}/api/v1/admin/campaigns/generate`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -298,8 +300,9 @@ export default function CampaignsPage() {
     setApproving(id);
     try {
       await fetch(`${BACKEND}/api/v1/admin/campaigns/${id}/approve`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
       });
       await fetchCampaigns(filter !== "all" ? filter : undefined);
     } finally { setApproving(null); }
@@ -309,8 +312,9 @@ export default function CampaignsPage() {
     setDismissing(id);
     try {
       await fetch(`${BACKEND}/api/v1/admin/campaigns/${id}/dismiss`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({}),
       });
       await fetchCampaigns(filter !== "all" ? filter : undefined);
     } finally { setDismissing(null); }

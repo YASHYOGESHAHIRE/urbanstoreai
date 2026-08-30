@@ -8,8 +8,33 @@ export interface AuthUser {
 
 export interface AuthResponse {
   user?: AuthUser;
+  token?: string;
   error?: string;
   details?: Record<string, string[]>;
+}
+
+// ─── Token storage ────────────────────────────────────────────────────────────
+
+const TOKEN_KEY = "urban_token";
+
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// ─── Auth headers ─────────────────────────────────────────────────────────────
+
+export function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -22,10 +47,11 @@ export async function apiRegister(
   const res = await fetch(`${API}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ name, email, password }),
   });
-  return res.json();
+  const data: AuthResponse = await res.json();
+  if (data.token) setStoredToken(data.token);
+  return data;
 }
 
 export async function apiLogin(
@@ -35,25 +61,29 @@ export async function apiLogin(
   const res = await fetch(`${API}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ email, password }),
   });
-  return res.json();
+  const data: AuthResponse = await res.json();
+  if (data.token) setStoredToken(data.token);
+  return data;
 }
 
 export async function apiLogout(): Promise<void> {
   await fetch(`${API}/auth/logout`, {
     method: "POST",
-    credentials: "include",
+    headers: authHeaders(),
   });
+  clearStoredToken();
 }
 
 export async function apiMe(): Promise<{
   authenticated: boolean;
   user: AuthUser | null;
 }> {
+  const token = getStoredToken();
+  if (!token) return { authenticated: false, user: null };
   const res = await fetch(`${API}/auth/me`, {
-    credentials: "include",
+    headers: authHeaders(),
   });
   return res.json();
 }

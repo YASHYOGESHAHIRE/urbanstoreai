@@ -130,6 +130,14 @@ export default function Header({ onAIToggle, aiOpen, cartCount = 0 }: HeaderProp
                       <LayoutDashboard size={13} />
                       Admin Panel
                     </Link>
+                    <Link
+                      href="/connect"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Zap size={13} />
+                      Connect Claude
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-red-600 hover:bg-red-50 transition-colors"

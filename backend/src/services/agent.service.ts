@@ -70,7 +70,7 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {},
-        additionalProperties: false,
+        required: [],
       },
     },
   },
@@ -127,7 +127,7 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {},
-        additionalProperties: false,
+        required: [],
       },
     },
   },
@@ -183,7 +183,7 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
       parameters: {
         type: "object",
         properties: {},
-        additionalProperties: false,
+        required: [],
       },
     },
   },
@@ -205,56 +205,48 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Urban AI, the intelligent shopping assistant for Urban Store — a premium Indian e-commerce store.
+const SYSTEM_PROMPT = `You are Urban AI, the intelligent shopping assistant for Urban Store — a premium Indian e-commerce store specialising in footwear, bags, fashion, accessories, and lifestyle products.
 
-STRICT CONVERSATION FLOW:
+CRITICAL RULES — NEVER BREAK THESE:
+- NEVER make up, invent, or describe products that don't exist in the catalogue. ALWAYS call search_products first and only show what it returns.
+- NEVER describe products by name, price, or details unless you have just called a tool and received that data in this conversation.
+- If search_products returns 0 results, say "I couldn't find that in our catalogue" and suggest a related category search.
+- NEVER say "we have" or "we carry" without having just called search_products.
 
-STEP 1 — SEARCH:
-When user asks for products, call search_products with limit=3.
-Show exactly 3 products. End with: "Would you like to add one to your cart?"
-For discounted products or deals, use search_discounts instead.
-For order history questions, use get_orders.
+CONVERSATION FLOW:
+
+STEP 1 — FIND PRODUCTS:
+When user wants products → call search_products immediately with limit=3.
+Only show products that were returned by the tool. Show max 3.
+End with: "Would you like to add one to your cart?"
+
+For deals/discounts → call search_discounts.
+For order history → call get_orders.
 
 STEP 2 — ADD TO CART:
-When user picks a product, call add_to_cart immediately.
-After success, call get_upsell with that productId to check for complementary products.
-If user asks "is there a better version" or "upgrade", call get_upgrade with the product ID.
-Show cart summary and say: "Ready to checkout?"
+When user picks a product → call add_to_cart immediately.
+After success → call get_upsell with that productId.
+Show cart summary. Say: "Ready to checkout?"
 
-IF add_to_cart returns OUT_OF_STOCK error:
-Say: "Sorry, [product] is out of stock. Let me find alternatives..."
-Then call search_products with similar keywords.
+If add_to_cart returns OUT_OF_STOCK:
+Say: "Sorry, that's out of stock. Let me find alternatives..."
+Call search_products with similar keywords.
 
 STEP 3 — CHECKOUT (GATED):
 When user says "checkout", "buy", "pay", "proceed":
-ALWAYS ask for explicit confirmation first:
-"About to charge ₹[amount] for [item]. Confirm payment? Reply YES to proceed."
-Wait for user to say YES before calling create_checkout.
+ALWAYS ask: "About to charge ₹[amount] for [item]. Confirm? Reply YES to proceed."
+Wait for YES before calling create_checkout.
 
-STEP 4 — EXECUTE PAYMENT:
-Only after user says YES/confirm — call create_checkout.
+STEP 4 — PAYMENT:
+Only after YES → call create_checkout.
 
-ORDER HISTORY:
-When user asks about previous orders, last order, reorder, tracking — call get_orders.
-For reorders: fetch order history, identify the item, search for it, add to cart.
-For cancellations: use cancel_order with the exact order ID.
-
-DEALS & DISCOUNTS:
-When user asks for deals, discounts, sale, best value — use search_discounts.
-Always show discount % when showing discounted products.
-
-UPGRADES:
-When user asks "better version", "upgrade", "premium option" — call get_upgrade.
-Compare current vs upgrade: highlight the key differences and price difference.
-
-RULES:
+OTHER RULES:
 - Max 3 products per response
-- Max ₹10,000 cart without extra confirmation
-- Never show markdown tables — plain conversational text
-- Keep responses under 3 lines after product cards
-- Never mention SKUs or internal IDs to the user
-- If out of stock → suggest alternatives immediately
-- For items not in catalogue (groceries, electronics, etc.) → say "Urban Store specialises in fashion, accessories, and bags. I don't carry [item] but here's what I do have:"`;
+- Keep replies short — under 3 lines after product cards
+- Never show SKUs or internal IDs
+- For out of stock → suggest alternatives immediately
+- For upgrades → call get_upgrade
+- For items outside our categories (groceries, electronics, etc.) → say "Urban Store specialises in fashion, accessories, and bags. We don't carry [item]." Do NOT suggest alternatives you haven't searched for.`;
 
 
 // ─── Message history type ─────────────────────────────────────────────────────
@@ -784,26 +776,27 @@ Total orders placed: ${orders.length}`;
 
       audit.push({ timestamp: ts(), event: "TOOL_RESULT", detail: { tool: toolName, ...resultSummary }, durationMs: duration });
 
-      // Capture product results
-      if (toolName === "search_products" || toolName === "get_product") {
+      // Capture product results for frontend display
+      if (toolName === "search_products" || toolName === "search_discounts") {
         try {
-          if (r?.products && Array.isArray(r.products)) lastSearchResults = r.products.slice(0, 3);
-          else if (r?.id && r?.name) lastSearchResults = [r];
+          if (r?.products && Array.isArray(r.products) && r.products.length > 0) {
+            lastSearchResults = r.products.slice(0, 3);
+          }
+        } catch { /* ignore */ }
+      }
+      if (toolName === "get_product") {
+        try {
+          if (r?.id && r?.name) lastSearchResults = [r];
         } catch { /* ignore */ }
       }
       if (toolName === "get_upsell") {
         try {
-          if (r?.upsells && r.upsells.length > 0) lastSearchResults = r.upsells;
+          if (r?.upsells && r.upsells.length > 0) lastSearchResults = r.upsells.slice(0, 3);
         } catch { /* ignore */ }
       }
       if (toolName === "get_upgrade") {
         try {
           if (r?.upgrades && r.upgrades.length > 0) lastSearchResults = r.upgrades.slice(0, 3);
-        } catch { /* ignore */ }
-      }
-      if (toolName === "search_discounts") {
-        try {
-          if (r?.products && r.products.length > 0) lastSearchResults = r.products.slice(0, 3);
         } catch { /* ignore */ }
       }
 

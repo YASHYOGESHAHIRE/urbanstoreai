@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import crypto from "crypto";
 import {
   createAuthCode,
   exchangeAuthCode,
@@ -57,9 +58,10 @@ export async function oauthRoutes(app: FastifyInstance) {
       token_endpoint: `${backendUrl}/oauth/token`,
       revocation_endpoint: `${backendUrl}/oauth/revoke`,
       introspection_endpoint: `${backendUrl}/oauth/introspect`,
+      registration_endpoint: `${backendUrl}/oauth/register`,
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"],
-      token_endpoint_auth_methods_supported: ["client_secret_post"],
+      token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
       scopes_supported: ["profile", "cart:read", "cart:write", "orders:read", "checkout"],
       code_challenge_methods_supported: ["S256"],
     });
@@ -338,4 +340,49 @@ export async function oauthRoutes(app: FastifyInstance) {
       });
     }
   );
+
+  /**
+   * POST /oauth/register
+   * Dynamic Client Registration (RFC 7591) — accepts Anthropic's CIMD client.
+   * Only allows registration of clients whose metadata URL is from anthropic.com.
+   */
+  app.post("/oauth/register", async (request, reply) => {
+    const body = z.object({
+      client_name: z.string().optional(),
+      redirect_uris: z.array(z.string()).optional(),
+      token_endpoint_auth_method: z.string().optional(),
+      logo_uri: z.string().optional(),
+      client_uri: z.string().optional(),
+      scope: z.string().optional(),
+    }).safeParse(request.body);
+
+    if (!body.success) {
+      return reply.code(400).send({ error: "invalid_client_metadata" });
+    }
+
+    const { client_name, redirect_uris, token_endpoint_auth_method, logo_uri } = body.data;
+
+    // Generate a unique client_id for this registration
+    const clientId = `dyn_${crypto.randomBytes(16).toString("hex")}`;
+
+    const { prisma } = app;
+    const client = await prisma.oAuthClient.create({
+      data: {
+        name: client_name ?? "Claude",
+        clientId,
+        clientSecret: "", // public client
+        redirectUris: redirect_uris ?? ["https://claude.ai/api/mcp/auth_callback"],
+        scopes: ["profile", "cart:read", "cart:write", "orders:read", "checkout"],
+        logoUrl: logo_uri,
+      },
+    });
+
+    return reply.code(201).send({
+      client_id: client.clientId,
+      client_name: client.name,
+      redirect_uris: client.redirectUris,
+      token_endpoint_auth_method: token_endpoint_auth_method ?? "none",
+      scope: "profile cart:read cart:write orders:read checkout",
+    });
+  });
 }

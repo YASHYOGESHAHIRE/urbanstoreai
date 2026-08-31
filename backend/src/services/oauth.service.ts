@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { prisma } from "../db/prisma.js";
 
 // Token lifetimes
@@ -28,6 +28,65 @@ function validateScopes(requested: string[]): Scope[] {
   );
 }
 
+// ─── CIMD: Anthropic hosted client metadata ───────────────────────────────────
+// Fetches and caches client metadata from Anthropic's CIMD URL.
+// This lets Claude connect without the user needing to enter any credentials.
+
+const CIMD_CACHE = new Map<string, { data: CIMDMetadata; fetchedAt: number }>();
+const CIMD_TTL_MS = 60 * 60 * 1000; // cache for 1 hour
+
+interface CIMDMetadata {
+  client_id: string;
+  client_name: string;
+  redirect_uris: string[];
+  token_endpoint_auth_method?: string;
+  logo_uri?: string;
+}
+
+async function fetchCIMD(cimdUrl: string): Promise<CIMDMetadata | null> {
+  const cached = CIMD_CACHE.get(cimdUrl);
+  if (cached && Date.now() - cached.fetchedAt < CIMD_TTL_MS) {
+    return cached.data;
+  }
+  try {
+    const res = await fetch(cimdUrl, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as CIMDMetadata;
+    CIMD_CACHE.set(cimdUrl, { data, fetchedAt: Date.now() });
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// Auto-register a CIMD client in the DB on first use
+async function getOrRegisterCIMDClient(cimdUrl: string) {
+  // Check if already registered
+  const existing = await prisma.oAuthClient.findUnique({
+    where: { clientId: cimdUrl },
+  });
+  if (existing) return existing;
+
+  // Fetch metadata from Anthropic
+  const meta = await fetchCIMD(cimdUrl);
+  if (!meta) return null;
+
+  // Register as a public client (no secret — token_endpoint_auth_method: none)
+  return prisma.oAuthClient.create({
+    data: {
+      name: meta.client_name ?? "Claude",
+      clientId: cimdUrl, // use CIMD URL as stable client_id
+      clientSecret: "", // public client — no secret
+      redirectUris: meta.redirect_uris ?? ["https://claude.ai/api/mcp/auth_callback"],
+      scopes: [...VALID_SCOPES],
+      logoUrl: meta.logo_uri,
+    },
+  });
+}
+
 // ─── Client validation ────────────────────────────────────────────────────────
 
 export async function validateClient(
@@ -36,11 +95,22 @@ export async function validateClient(
 ): Promise<boolean> {
   const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
   if (!client) return false;
-  return argon2.verify(client.clientSecret, clientSecret);
+  // Public client (CIMD) — no secret required
+  if (!client.clientSecret) return true;
+  return bcrypt.compare(clientSecret, client.clientSecret);
 }
 
 export async function getClientById(clientId: string) {
-  return prisma.oAuthClient.findUnique({ where: { clientId } });
+  // Standard DB lookup first
+  const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
+  if (client) return client;
+
+  // If clientId looks like a CIMD URL, auto-register it
+  if (clientId.startsWith("https://")) {
+    return getOrRegisterCIMDClient(clientId);
+  }
+
+  return null;
 }
 
 // ─── Authorization code flow ──────────────────────────────────────────────────
@@ -91,8 +161,11 @@ export async function exchangeAuthCode(
   const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
   if (!client) throw new Error("INVALID_CLIENT");
 
-  const secretValid = await argon2.verify(client.clientSecret, clientSecret);
-  if (!secretValid) throw new Error("INVALID_CLIENT");
+  // Skip secret check for public clients (CIMD — empty secret)
+  if (client.clientSecret) {
+    const secretValid = await bcrypt.compare(clientSecret, client.clientSecret);
+    if (!secretValid) throw new Error("INVALID_CLIENT");
+  }
 
   const authCode = await prisma.oAuthAuthCode.findUnique({ where: { code } });
   if (!authCode) throw new Error("INVALID_CODE");
@@ -147,8 +220,11 @@ export async function refreshAccessToken(
   const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
   if (!client) throw new Error("INVALID_CLIENT");
 
-  const secretValid = await argon2.verify(client.clientSecret, clientSecret);
-  if (!secretValid) throw new Error("INVALID_CLIENT");
+  // Skip secret check for public clients (CIMD)
+  if (client.clientSecret) {
+    const secretValid = await bcrypt.compare(clientSecret, client.clientSecret);
+    if (!secretValid) throw new Error("INVALID_CLIENT");
+  }
 
   const grant = await prisma.oAuthGrant.findUnique({
     where: { refreshToken },
@@ -266,9 +342,9 @@ export async function createOAuthClient(data: {
   scopes: string[];
   logoUrl?: string;
 }) {
-  const hashedSecret = await argon2.hash(data.clientSecret, {
-    type: argon2.argon2id,
-  });
+  const hashedSecret = data.clientSecret
+    ? await bcrypt.hash(data.clientSecret, 12)
+    : "";
 
   return prisma.oAuthClient.upsert({
     where: { clientId: data.clientId },

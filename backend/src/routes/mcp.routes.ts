@@ -39,6 +39,15 @@ function text(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
+function authError() {
+  return text({
+    error: "OAUTH_TOKEN_EXPIRED_OR_INVALID",
+    message: "Urban Store could not authenticate you. Your OAuth token may have expired.",
+    action: "Please reconnect Urban Store from Claude Settings → Integrations.",
+    reauthorizeUrl: `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/connect`,
+  });
+}
+
 // ─── Build a fresh McpServer with request in closure ─────────────────────────
 // Called once per incoming request — lightweight, no shared state.
 
@@ -87,7 +96,11 @@ RULES:
   // ── search_catalog ──────────────────────────────────────────────────────────
   server.tool(
     "search_catalog",
-    "Search Urban Store products. Natural language queries like 'laptop bag under 3000'. Filter by category, price, availability.",
+    `Search Urban Store's product catalogue (500+ products across footwear, bags, fashion, accessories, lifestyle).
+Returns up to 'limit' products, each with: id, name, brand, price (INR), mrp, availability, and variants[].
+Each variant has: sku (needed for add_to_cart), attributes (size/color), price, availability.
+Use this first — productIds and variantSkus needed by other tools come from here.
+Tip: if results are empty, retry with broader terms (drop subcategory or price filters).`,
     {
       query:        z.string().optional().describe("Natural language search query"),
       category:     z.enum(["footwear", "bags", "fashion", "accessories", "lifestyle"]).optional(),
@@ -105,7 +118,9 @@ RULES:
   // ── get_product ─────────────────────────────────────────────────────────────
   server.tool(
     "get_product",
-    "Get full product details — variants, sizes, colours, prices, stock.",
+    `Get complete details for a product by its ID (e.g. 'urs_bag_001').
+Returns all variants with exact SKUs needed for add_to_cart, plus stock levels per variant.
+Use after search_catalog when you need variant-level details before adding to cart.`,
     { productId: z.string().describe("Product ID e.g. 'urs_bag_001'") },
     async ({ productId }) => {
       const product = await getProduct(productId);
@@ -116,11 +131,14 @@ RULES:
   // ── get_cart ────────────────────────────────────────────────────────────────
   server.tool(
     "get_cart",
-    "Get the user's cart — items, quantities, prices, subtotal.",
+    `View the user's current shopping cart.
+Returns items[] each with: id (needed for remove_from_cart), productName, attributes, quantity, price, subtotal.
+Also returns: subtotal, savings, itemCount.
+Use before create_checkout to show the user what they're paying for.`,
     {},
     async () => {
       const user = await getUserFromRequest(request);
-      if (!user) return text({ error: "UNAUTHORIZED" });
+      if (!user) return authError();
       return text(await getOrCreateCart(user.id));
     }
   );
@@ -128,7 +146,11 @@ RULES:
   // ── add_to_cart ─────────────────────────────────────────────────────────────
   server.tool(
     "add_to_cart",
-    "Add a product variant to cart. Confirm product name and price with user before calling.",
+    `Add a specific product variant to the user's cart.
+IMPORTANT: variantSku must come from search_catalog or get_product results — it is not guessable.
+Always show the user the product name, variant attributes, and price BEFORE calling this and get confirmation.
+Returns the updated cart with all items and subtotal.
+Related tools: get_cart (view cart), remove_from_cart (remove item), create_checkout (pay).`,
     {
       productId:  z.string().describe("Product ID"),
       variantSku: z.string().describe("Variant SKU from get_product"),
@@ -136,7 +158,7 @@ RULES:
     },
     async ({ productId, variantSku, quantity }) => {
       const user = await getUserFromRequest(request);
-      if (!user) return text({ error: "UNAUTHORIZED" });
+      if (!user) return authError();
       try {
         return text({ success: true, cart: await addToCart(user.id, productId, variantSku, quantity) });
       } catch (err) {
@@ -148,11 +170,13 @@ RULES:
   // ── remove_from_cart ────────────────────────────────────────────────────────
   server.tool(
     "remove_from_cart",
-    "Remove a cart item by its ID (from get_cart).",
+    `Remove a specific item from the cart using its item ID.
+The item ID (not the product ID) comes from get_cart response — items[].id.
+Returns the updated cart after removal.`,
     { itemId: z.string().describe("Cart item ID") },
     async ({ itemId }) => {
       const user = await getUserFromRequest(request);
-      if (!user) return text({ error: "UNAUTHORIZED" });
+      if (!user) return authError();
       try {
         return text({ success: true, cart: await removeFromCart(user.id, itemId) });
       } catch (err) {
@@ -164,11 +188,16 @@ RULES:
   // ── create_checkout ─────────────────────────────────────────────────────────
   server.tool(
     "create_checkout",
-    "Create Razorpay checkout from cart. ALWAYS show cart total and get explicit user confirmation first.",
+    `Initiate checkout for the user's current cart. This is the "preview/dry-run" step — it validates stock and pricing and creates a Razorpay order, but does NOT charge the user.
+The user must complete payment manually at the returned paymentUrl.
+ALWAYS call get_cart first and show the user the full cart contents and total.
+ALWAYS get explicit YES confirmation from the user before calling this.
+Returns: checkoutId, subtotal, razorpayOrderId, paymentUrl, policyWarnings[].
+Error codes: EMPTY_CART (nothing in cart), POLICY_REJECTED (stock/price issue), CONFIRMATION_REQUIRED (user hasn't confirmed).`,
     {},
     async () => {
       const user = await getUserFromRequest(request);
-      if (!user) return text({ error: "UNAUTHORIZED" });
+      if (!user) return authError();
       try {
         return text(await createCheckout(user.id));
       } catch (err) {
@@ -180,11 +209,13 @@ RULES:
   // ── get_orders ──────────────────────────────────────────────────────────────
   server.tool(
     "get_orders",
-    "Get user's past orders — IDs, items, totals, status, dates.",
+    `Get the user's order history, most recent first.
+Returns orders[] each with: id, status (placed/processing/shipped/delivered/cancelled), total (INR), items[], createdAt.
+Useful for: checking order status, reordering previous items, finding order IDs for cancellation.`,
     { limit: z.number().min(1).max(20).default(10) },
     async ({ limit }) => {
       const user = await getUserFromRequest(request);
-      if (!user) return text({ error: "UNAUTHORIZED" });
+      if (!user) return authError();
       const orders = await prisma.order.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },

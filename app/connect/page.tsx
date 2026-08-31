@@ -117,10 +117,32 @@ export default function ConnectPage() {
           <div className="flex gap-4 mb-6">
             <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">3</div>
             <div className="flex-1">
-              <p className="text-gray-900 text-[14px] font-semibold mb-1">Paste the URL and click Add</p>
-              <p className="text-gray-400 text-[12px]">
-                Claude will auto-detect the OAuth settings. Select <strong className="text-gray-700">Always required</strong> for authentication, then click <strong className="text-gray-700">Add</strong>.
-              </p>
+              <p className="text-gray-900 text-[14px] font-semibold mb-1">Paste the URL and configure</p>
+              <p className="text-gray-400 text-[12px] mb-3">Paste the URL above, then set these options exactly:</p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black mt-1.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-gray-900 text-[12px] font-bold">Authentication</p>
+                    <p className="text-gray-500 text-[12px]">Select <strong className="text-black">Always required</strong></p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black mt-1.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-gray-900 text-[12px] font-bold">OAuth client</p>
+                    <p className="text-gray-500 text-[12px]">Select <strong className="text-black">Use Anthropic&apos;s hosted client metadata</strong> (Recommended)</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-black mt-1.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-gray-900 text-[12px] font-bold">Transport</p>
+                    <p className="text-gray-500 text-[12px]">Leave as <strong className="text-black">Streamable HTTP</strong></p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-400 text-[12px] mt-3">Then click <strong className="text-gray-700">Add</strong>.</p>
             </div>
           </div>
 

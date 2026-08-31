@@ -4,6 +4,8 @@ import { SafeUser } from "../services/auth.service.js";
 
 export const COOKIE_NAME = "urban_session";
 
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
+
 // Augment Fastify request type
 declare module "fastify" {
   interface FastifyRequest {
@@ -11,11 +13,6 @@ declare module "fastify" {
   }
 }
 
-/**
- * Prehandler hook — reads the HTTP-only session cookie, validates the session,
- * and attaches the authenticated user to request.user.
- * Never trusts userId from the request body/query.
- */
 export async function attachUser(
   request: FastifyRequest,
   _reply: FastifyReply
@@ -33,15 +30,18 @@ export async function attachUser(
   request.user = await getUserFromToken(token);
 }
 
-/**
- * Guard hook — call this on routes that require authentication.
- * Returns 401 if no valid session.
- */
 export async function requireAuth(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   if (!request.user) {
-    reply.code(401).send({ error: "UNAUTHORIZED" });
+    const hasToken = !!request.headers.authorization || !!request.cookies?.[COOKIE_NAME];
+    reply.code(401).send({
+      error: hasToken ? "TOKEN_EXPIRED" : "TOKEN_MISSING",
+      message: hasToken
+        ? "Your session has expired. Please log in again."
+        : "Authentication required. Please log in.",
+      loginUrl: `${FRONTEND_URL}/login`,
+    });
   }
 }

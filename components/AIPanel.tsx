@@ -7,8 +7,7 @@ import {
   X, Send, Mic, Zap, Loader2, ShoppingCart, ExternalLink,
   Check, AlertTriangle, CreditCard, ShieldCheck, Lock,
   TrendingUp, ChevronDown, ChevronRight, Receipt,
-} from "lucide-react";
-import { saveAuditEntries, appendAuditEntry, newAuditSession, AuditEntry } from "@/lib/auditStore";
+} from "lucide-react";import { saveAuditEntries, appendAuditEntry, newAuditSession, AuditEntry } from "@/lib/auditStore";
 import { authHeaders } from "@/lib/auth";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
@@ -278,6 +277,13 @@ function ProductCard({ product, onAdd, adding }: {
             <span className="text-red-400 text-[11px] font-bold">Out of stock</span>
           </div>
         )}
+        {/* View link on hover */}
+        <Link
+          href={`/product/${product.id}`} target="_blank"
+          className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <ExternalLink size={10} className="text-white" />
+        </Link>
       </div>
 
       {/* Info */}
@@ -303,11 +309,11 @@ function ProductCard({ product, onAdd, adding }: {
         </p>
 
         {/* Buttons */}
-        <div className="flex gap-2">
+        <div className="mt-auto">
           <button
             onClick={() => onAdd(product)}
             disabled={!inStock || adding}
-            className={`flex-1 py-2 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all ${
+            className={`w-full py-2.5 rounded-xl text-[12px] font-bold flex items-center justify-center gap-1.5 transition-all ${
               !inStock
                 ? "bg-[#1a1a1a] text-[#333] cursor-not-allowed border border-[#222]"
                 : adding
@@ -316,14 +322,8 @@ function ProductCard({ product, onAdd, adding }: {
             }`}
           >
             {adding ? <Loader2 size={12} className="animate-spin" /> : <ShoppingCart size={12} />}
-            Add to Cart
+            {adding ? "Adding…" : "Add to Cart"}
           </button>
-          <Link
-            href={`/product/${product.id}`} target="_blank"
-            className="w-9 h-9 flex items-center justify-center bg-[#222] hover:bg-[#2a2a2a] rounded-xl transition-colors flex-shrink-0"
-          >
-            <ExternalLink size={13} className="text-[#777]" />
-          </Link>
         </div>
       </div>
     </div>
@@ -372,23 +372,33 @@ function UpsellStrip({ products, onAdd, adding }: {
 
 // ─── Cart summary ─────────────────────────────────────────────────────────────
 
-function CartSummary({ cart, onCheckout, loading }: {
+function CartSummary({ cart, onCheckout, onRemove, loading }: {
   cart: CartData;
   onCheckout: () => void;
+  onRemove: (itemId: string) => void;
   loading: boolean;
 }) {
   return (
     <div className="bg-[#161616] border border-[#272727] rounded-2xl p-4">
       <p className="text-[#555] text-[11px] font-bold uppercase tracking-wider mb-3">Your Cart</p>
       {cart.items.map((item) => (
-        <div key={item.id} className="flex items-start justify-between mb-2.5">
+        <div key={item.id} className="flex items-start justify-between mb-2.5 group">
           <div className="flex-1 min-w-0 mr-3">
-            <p className="text-white text-[14px] font-medium leading-snug">{item.productName}</p>
+            <p className="text-white text-[13px] font-medium leading-snug">{item.productName}</p>
             <p className="text-[#555] text-[12px] mt-0.5">
               {Object.values(item.attributes).join(" · ")} × {item.quantity}
             </p>
           </div>
-          <span className="text-white text-[14px] font-bold flex-shrink-0">{fmt(item.subtotal)}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-white text-[13px] font-bold">{fmt(item.subtotal)}</span>
+            <button
+              onClick={() => onRemove(item.id)}
+              className="w-5 h-5 flex items-center justify-center rounded-full text-[#444] hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
+              title="Remove"
+            >
+              <X size={11} />
+            </button>
+          </div>
         </div>
       ))}
       <div className="border-t border-[#222] pt-3 mt-1 flex items-center justify-between mb-1">
@@ -726,6 +736,26 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
     }
   }, [sendMessage]);
 
+  // ─── Remove from cart ───────────────────────────────────────────────────────
+
+  const handleRemoveFromCart = useCallback(async (itemId: string) => {
+    try {
+      const res = await fetch(`${BACKEND}/api/v1/cart/items/${itemId}`, {
+        method: "DELETE",
+        headers: { ...authHeaders() },
+      });
+      if (!res.ok) return;
+      const cart: CartData = await res.json();
+      // Update all cart summaries in messages
+      setMessages((prev) => prev.map((m) => {
+        if (m.cart) return { ...m, cart };
+        if (m.confirmGate) return { ...m, confirmGate: { cart } };
+        return m;
+      }));
+      appendAuditEntry("CART_ACTION", { action: "removed", itemId });
+    } catch { /* ignore */ }
+  }, []);
+
   // ─── Request checkout (show money gate) ────────────────────────────────────
 
   const handleRequestCheckout = useCallback(async () => {
@@ -962,7 +992,7 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
 
                     {/* ── Cart summary ── */}
                     {msg.cart && (
-                      <CartSummary cart={msg.cart} onCheckout={handleRequestCheckout} loading={checkoutLoading} />
+                      <CartSummary cart={msg.cart} onCheckout={handleRequestCheckout} onRemove={handleRemoveFromCart} loading={checkoutLoading} />
                     )}
 
                     {/* ── Money gate ── */}

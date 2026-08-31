@@ -8,18 +8,14 @@ export interface AgentContext {
   grantId: string;
 }
 
-// Augment Fastify request
 declare module "fastify" {
   interface FastifyRequest {
     agent: AgentContext | null;
   }
 }
 
-/**
- * Reads Authorization: Bearer <token> header,
- * validates it, and attaches agent context to request.agent.
- * Never trusts userId from request body.
- */
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
+
 export async function attachAgent(
   request: FastifyRequest,
   _reply: FastifyReply
@@ -29,40 +25,48 @@ export async function attachAgent(
     request.agent = null;
     return;
   }
-
   const token = authHeader.slice(7);
   request.agent = await validateAccessToken(token);
 }
 
-/**
- * Guard — requires a valid agent Bearer token.
- */
 export async function requireAgent(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   if (!request.agent) {
-    reply.code(401).send({ error: "INVALID_TOKEN" });
+    const hasToken = !!request.headers.authorization;
+    reply.code(401).send({
+      error: hasToken ? "OAUTH_TOKEN_EXPIRED" : "OAUTH_TOKEN_MISSING",
+      message: hasToken
+        ? "Your OAuth access token has expired. Please reconnect Urban Store."
+        : "No OAuth token provided. Please connect Urban Store first.",
+      reauthorizeUrl: `${FRONTEND_URL}/connect`,
+      hint: "Visit the reauthorizeUrl to reconnect, then retry.",
+    });
   }
 }
 
-/**
- * Scope guard factory — requireScope("cart:write")
- */
 export function requireScope(scope: Scope) {
   return async function (
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
     if (!request.agent) {
-      reply.code(401).send({ error: "INVALID_TOKEN" });
+      reply.code(401).send({
+        error: "OAUTH_TOKEN_MISSING",
+        message: "No OAuth token provided.",
+        reauthorizeUrl: `${FRONTEND_URL}/connect`,
+      });
       return;
     }
     if (!request.agent.scopes.includes(scope)) {
       reply.code(403).send({
         error: "INSUFFICIENT_SCOPE",
-        required: scope,
-        granted: request.agent.scopes,
+        message: `This action requires the '${scope}' scope which was not granted.`,
+        requiredScope: scope,
+        grantedScopes: request.agent.scopes,
+        hint: `Reconnect Urban Store and grant the '${scope}' permission.`,
+        reauthorizeUrl: `${FRONTEND_URL}/connect`,
       });
     }
   };

@@ -4,6 +4,9 @@
  * Uses @modelcontextprotocol/sdk v1 (stable).
  * Transport: Streamable HTTP at POST /mcp
  * Auth:      OAuth 2.0 Bearer token — same tokens issued by /oauth/token
+ *
+ * A new McpServer is built per request so the Fastify request object
+ * is captured in a closure — no requestContext hacks needed, no type errors.
  */
 
 import { FastifyInstance, FastifyRequest } from "fastify";
@@ -28,9 +31,10 @@ function text(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-// ─── Build MCP server ─────────────────────────────────────────────────────────
+// ─── Build a fresh McpServer with request in closure ─────────────────────────
+// Called once per incoming request — lightweight, no shared state.
 
-function buildMcpServer() {
+function buildMcpServer(request: FastifyRequest) {
   const server = new McpServer({ name: "urban-store", version: "1.0.0" });
 
   // ── search_catalog ──────────────────────────────────────────────────────────
@@ -67,10 +71,8 @@ function buildMcpServer() {
     "get_cart",
     "Get the user's cart — items, quantities, prices, subtotal.",
     {},
-    async (_args, { requestContext }) => {
-      const req = (requestContext as { request?: FastifyRequest })?.request;
-      if (!req) return text({ error: "No request context" });
-      const user = await getUserFromRequest(req);
+    async () => {
+      const user = await getUserFromRequest(request);
       if (!user) return text({ error: "UNAUTHORIZED" });
       return text(await getOrCreateCart(user.id));
     }
@@ -85,10 +87,8 @@ function buildMcpServer() {
       variantSku: z.string().describe("Variant SKU from get_product"),
       quantity:   z.number().min(1).max(5).default(1),
     },
-    async ({ productId, variantSku, quantity }, { requestContext }) => {
-      const req = (requestContext as { request?: FastifyRequest })?.request;
-      if (!req) return text({ error: "No request context" });
-      const user = await getUserFromRequest(req);
+    async ({ productId, variantSku, quantity }) => {
+      const user = await getUserFromRequest(request);
       if (!user) return text({ error: "UNAUTHORIZED" });
       try {
         return text({ success: true, cart: await addToCart(user.id, productId, variantSku, quantity) });
@@ -103,10 +103,8 @@ function buildMcpServer() {
     "remove_from_cart",
     "Remove a cart item by its ID (from get_cart).",
     { itemId: z.string().describe("Cart item ID") },
-    async ({ itemId }, { requestContext }) => {
-      const req = (requestContext as { request?: FastifyRequest })?.request;
-      if (!req) return text({ error: "No request context" });
-      const user = await getUserFromRequest(req);
+    async ({ itemId }) => {
+      const user = await getUserFromRequest(request);
       if (!user) return text({ error: "UNAUTHORIZED" });
       try {
         return text({ success: true, cart: await removeFromCart(user.id, itemId) });
@@ -121,10 +119,8 @@ function buildMcpServer() {
     "create_checkout",
     "Create Razorpay checkout from cart. ALWAYS show cart total and get explicit user confirmation first.",
     {},
-    async (_args, { requestContext }) => {
-      const req = (requestContext as { request?: FastifyRequest })?.request;
-      if (!req) return text({ error: "No request context" });
-      const user = await getUserFromRequest(req);
+    async () => {
+      const user = await getUserFromRequest(request);
       if (!user) return text({ error: "UNAUTHORIZED" });
       try {
         return text(await createCheckout(user.id));
@@ -139,10 +135,8 @@ function buildMcpServer() {
     "get_orders",
     "Get user's past orders — IDs, items, totals, status, dates.",
     { limit: z.number().min(1).max(20).default(10) },
-    async ({ limit }, { requestContext }) => {
-      const req = (requestContext as { request?: FastifyRequest })?.request;
-      if (!req) return text({ error: "No request context" });
-      const user = await getUserFromRequest(req);
+    async ({ limit }) => {
+      const user = await getUserFromRequest(request);
       if (!user) return text({ error: "UNAUTHORIZED" });
       const orders = await prisma.order.findMany({
         where: { userId: user.id },
@@ -160,20 +154,24 @@ function buildMcpServer() {
   return server;
 }
 
-// ─── Singleton ────────────────────────────────────────────────────────────────
-
-const mcpServer = buildMcpServer();
-
 // ─── Fastify routes ───────────────────────────────────────────────────────────
 
 export async function mcpRoutes(app: FastifyInstance) {
 
+  // POST /mcp — new server per request, request captured in closure
   app.post("/mcp", async (request, reply) => {
+    const server = buildMcpServer(request);
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless
     });
-    reply.raw.on("close", () => transport.close());
-    await mcpServer.connect(transport);
+
+    reply.raw.on("close", async () => {
+      await transport.close();
+      await server.close();
+    });
+
+    await server.connect(transport);
     await transport.handleRequest(request.raw, reply.raw, request.body);
   });
 

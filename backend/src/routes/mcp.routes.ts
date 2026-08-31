@@ -13,18 +13,26 @@ import { FastifyInstance, FastifyRequest } from "fastify";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { getUserFromToken } from "../services/auth.service.js";
+import { validateAccessToken } from "../services/oauth.service.js";
 import { searchProducts, getProduct } from "../services/catalog.service.js";
 import { getOrCreateCart, addToCart, removeFromCart } from "../services/cart.service.js";
 import { createCheckout } from "../services/checkout.service.js";
 import { prisma } from "../db/prisma.js";
 import { z } from "zod";
 
-// ─── Auth helper ──────────────────────────────────────────────────────────────
+// ─── Auth helper — accepts OAuth access tokens AND session tokens ─────────────
 
 async function getUserFromRequest(request: FastifyRequest) {
   const auth = request.headers.authorization;
-  if (auth?.startsWith("Bearer ")) return getUserFromToken(auth.slice(7));
-  return null;
+  if (!auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+
+  // Try OAuth access token first (Claude/agent connections via /oauth/token)
+  const oauthResult = await validateAccessToken(token);
+  if (oauthResult) return oauthResult.user;
+
+  // Fall back to session token (direct user session)
+  return getUserFromToken(token);
 }
 
 function text(data: unknown) {

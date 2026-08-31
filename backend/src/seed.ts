@@ -63,99 +63,93 @@ async function seedProducts() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const catalog = catalogRaw as any[];
-  let created = 0;
-  let skipped = 0;
+
+  // Build flat arrays for bulk operations
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productData: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const variantData: any[] = [];
 
   for (const entry of catalog) {
     const p = entry.product;
 
-    // Upsert product
-    await prisma.product.upsert({
-      where: { id: p.id },
-      update: {
-        name: p.name,
-        brand: p.brand,
-        categoryId: p.category.id,
-        categoryName: p.category.name,
-        subcategoryId: p.subcategory?.id ?? p.category.id,
-        subcategoryName: p.subcategory?.name ?? p.category.name,
-        description: p.description,
-        imageAlt: p.media?.primary_image?.alt ?? "",
-        useCases: p.semantic_profile?.use_cases ?? [],
-        suitableFor: p.semantic_profile?.suitable_for ?? [],
-        notSuitableFor: p.semantic_profile?.not_suitable_for ?? [],
-        characteristics: p.semantic_profile?.characteristics ?? {},
-        similarTo: p.relationships?.similar_to ?? [],
-        alternativeTo: p.relationships?.alternative_to ?? [],
-        compatibleWith: p.relationships?.compatible_with ?? [],
-        complements: p.relationships?.complements ?? [],
-        upgradeTo: p.relationships?.upgrade_to ?? [],
-        frequentlyBoughtWith: p.relationships?.frequently_bought_with ?? [],
-        requiresVariantSelect:
-          p.purchase_constraints?.requires_variant_selection ?? false,
-        maxQtyPerOrder: p.purchase_constraints?.max_quantity_per_order ?? 5,
-      },
-      create: {
-        id: p.id,
-        merchantId: entry.merchant_id ?? "urban_store",
-        name: p.name,
-        brand: p.brand,
-        categoryId: p.category.id,
-        categoryName: p.category.name,
-        subcategoryId: p.subcategory?.id ?? p.category.id,
-        subcategoryName: p.subcategory?.name ?? p.category.name,
-        description: p.description,
-        imageAlt: p.media?.primary_image?.alt ?? "",
-        useCases: p.semantic_profile?.use_cases ?? [],
-        suitableFor: p.semantic_profile?.suitable_for ?? [],
-        notSuitableFor: p.semantic_profile?.not_suitable_for ?? [],
-        characteristics: p.semantic_profile?.characteristics ?? {},
-        similarTo: p.relationships?.similar_to ?? [],
-        alternativeTo: p.relationships?.alternative_to ?? [],
-        compatibleWith: p.relationships?.compatible_with ?? [],
-        complements: p.relationships?.complements ?? [],
-        upgradeTo: p.relationships?.upgrade_to ?? [],
-        frequentlyBoughtWith: p.relationships?.frequently_bought_with ?? [],
-        requiresVariantSelect:
-          p.purchase_constraints?.requires_variant_selection ?? false,
-        maxQtyPerOrder: p.purchase_constraints?.max_quantity_per_order ?? 5,
-      },
+    productData.push({
+      id: p.id,
+      merchantId: entry.merchant_id ?? "urban_store",
+      name: p.name,
+      brand: p.brand,
+      categoryId: p.category.id,
+      categoryName: p.category.name,
+      subcategoryId: p.subcategory?.id ?? p.category.id,
+      subcategoryName: p.subcategory?.name ?? p.category.name,
+      description: p.description,
+      imageAlt: p.media?.primary_image?.alt ?? "",
+      useCases: p.semantic_profile?.use_cases ?? [],
+      suitableFor: p.semantic_profile?.suitable_for ?? [],
+      notSuitableFor: p.semantic_profile?.not_suitable_for ?? [],
+      characteristics: p.semantic_profile?.characteristics ?? {},
+      similarTo: p.relationships?.similar_to ?? [],
+      alternativeTo: p.relationships?.alternative_to ?? [],
+      compatibleWith: p.relationships?.compatible_with ?? [],
+      complements: p.relationships?.complements ?? [],
+      upgradeTo: p.relationships?.upgrade_to ?? [],
+      frequentlyBoughtWith: p.relationships?.frequently_bought_with ?? [],
+      requiresVariantSelect: p.purchase_constraints?.requires_variant_selection ?? false,
+      maxQtyPerOrder: p.purchase_constraints?.max_quantity_per_order ?? 5,
     });
 
-    // Upsert variants
     for (const v of p.variants ?? []) {
-      await prisma.productVariant.upsert({
-        where: { sku: v.sku },
-        update: {
-          attributes: v.attributes,
-          priceAmount: v.commerce.price.amount,
-          priceCurrency: v.commerce.price.currency,
-          mrpAmount: v.commerce.mrp.amount,
-          mrpCurrency: v.commerce.mrp.currency,
-          availabilityStatus: v.commerce.availability.status,
-          quantityAvailable: v.commerce.availability.quantity_available,
-          lastUpdated: new Date(v.commerce.last_updated),
-        },
-        create: {
-          sku: v.sku,
-          productId: p.id,
-          attributes: v.attributes,
-          priceAmount: v.commerce.price.amount,
-          priceCurrency: v.commerce.price.currency,
-          mrpAmount: v.commerce.mrp.amount,
-          mrpCurrency: v.commerce.mrp.currency,
-          availabilityStatus: v.commerce.availability.status,
-          quantityAvailable: v.commerce.availability.quantity_available,
-          lastUpdated: new Date(v.commerce.last_updated),
-        },
+      variantData.push({
+        sku: v.sku,
+        productId: p.id,
+        attributes: v.attributes,
+        priceAmount: v.commerce.price.amount,
+        priceCurrency: v.commerce.price.currency,
+        mrpAmount: v.commerce.mrp.amount,
+        mrpCurrency: v.commerce.mrp.currency,
+        availabilityStatus: v.commerce.availability.status,
+        quantityAvailable: v.commerce.availability.quantity_available,
+        lastUpdated: new Date(v.commerce.last_updated),
       });
     }
-
-    console.log(`  ✓ ${p.id}  ${p.name}`);
-    created++;
   }
 
-  console.log(`\n${created} products seeded, ${skipped} skipped.`);
+  // Bulk upsert products in chunks of 50
+  const CHUNK = 50;
+  let productsDone = 0;
+  for (let i = 0; i < productData.length; i += CHUNK) {
+    const chunk = productData.slice(i, i + CHUNK);
+    await Promise.all(
+      chunk.map((p) =>
+        prisma.product.upsert({
+          where: { id: p.id },
+          update: p,
+          create: p,
+        })
+      )
+    );
+    productsDone += chunk.length;
+    process.stdout.write(`\r  Products: ${productsDone}/${productData.length}`);
+  }
+
+  // Bulk upsert variants in chunks of 100
+  let variantsDone = 0;
+  for (let i = 0; i < variantData.length; i += CHUNK * 2) {
+    const chunk = variantData.slice(i, i + CHUNK * 2);
+    await Promise.all(
+      chunk.map((v) =>
+        prisma.productVariant.upsert({
+          where: { sku: v.sku },
+          update: v,
+          create: v,
+        })
+      )
+    );
+    variantsDone += chunk.length;
+    process.stdout.write(`\r  Variants: ${variantsDone}/${variantData.length} `);
+  }
+
+  console.log(`\n\n${productData.length} products, ${variantData.length} variants seeded.`);
 }
 
 // ─── Run ──────────────────────────────────────────────────────────────────────

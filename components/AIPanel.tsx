@@ -697,15 +697,16 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
       const cart: CartData = await res.json();
       appendAuditEntry("CART_ACTION", { action: "added", productName: product.name, sku: variant.sku, cartTotal: cart.subtotal });
 
-      // Get upsells silently
+      // Get upsells via direct REST — no LLM round trip
       let upsells: ProductData[] = [];
       try {
-        const ur = await fetch(`${BACKEND}/api/v1/agent/chat`, {
-          method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ message: `get_upsell for ${product.id}`, sessionId: sessionId ?? undefined }),
+        const ur = await fetch(`${BACKEND}/api/v1/products/${product.id}/upsell`, {
+          headers: { ...authHeaders() },
         });
-        const ud = await ur.json();
-        if (ud.products?.length > 0) upsells = ud.products;
+        if (ur.ok) {
+          const ud = await ur.json();
+          if (ud.upsells?.length > 0) upsells = ud.upsells;
+        }
       } catch { /* optional */ }
 
       setMessages((prev) => [...prev, {

@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { searchProducts, getProduct, getProductAvailability } from "../services/catalog.service.js";
+import { searchProducts, getProduct, getProductAvailability, getUpsells, getUpgrades } from "../services/catalog.service.js";
 
 export async function catalogRoutes(app: FastifyInstance) {
 
@@ -39,5 +39,19 @@ export async function catalogRoutes(app: FastifyInstance) {
     const avail = await getProductAvailability(id);
     if (!avail) return reply.code(404).send({ error: "PRODUCT_NOT_FOUND" });
     return reply.send(avail);
+  });
+
+  // GET /api/v1/products/:id/upsell — direct DB lookup, no LLM
+  app.get("/api/v1/products/:id/upsell", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await getUpsells(id);
+    return reply.send(result);
+  });
+
+  // GET /api/v1/products/:id/upgrade — direct DB lookup, no LLM
+  app.get("/api/v1/products/:id/upgrade", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await getUpgrades(id);
+    return reply.send(result);
   });
 }

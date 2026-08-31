@@ -69,14 +69,37 @@ export async function cancelOrder(
     throw new Error("CANNOT_CANCEL");
   }
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { status: "cancelled" },
+  // Fix #6: Wrap entire cancel + stock restore in one transaction
+  // If any stock update fails, the order stays in its original state — no partial drift.
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: orderId },
+      data: { status: "cancelled" },
+    });
+
+    // Restore stock for every item in the order
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = order.itemsJson as any[];
+    for (const item of items) {
+      const variant = await tx.productVariant.findUnique({
+        where: { sku: item.variantSku },
+        select: { quantityAvailable: true },
+      });
+      if (variant) {
+        const restored = variant.quantityAvailable + item.quantity;
+        await tx.productVariant.update({
+          where: { sku: item.variantSku },
+          data: {
+            quantityAvailable: { increment: item.quantity },
+            availabilityStatus: restored > 5 ? "in_stock" : restored > 0 ? "low_stock" : "out_of_stock",
+          },
+        });
+      }
+    }
   });
 
   await auditLog({
-    userId,
-    agentGrantId,
+    userId, agentGrantId,
     action: "order.cancel",
     payload: { orderId },
   });
@@ -111,39 +134,85 @@ export async function handleRazorpayWebhook(
 
     const checkout = await prisma.checkout.findUnique({
       where: { razorpayOrderId },
+      include: {
+        cart: {
+          include: {
+            items: { include: { product: true, variant: true } },
+          },
+        },
+      },
     });
 
     if (checkout && checkout.status !== "paid") {
-      await prisma.checkout.update({
-        where: { id: checkout.id },
-        data: { status: "paid", razorpayPaymentId: payment.id },
-      });
+      // Build items snapshot from cart
+      const itemsSnapshot = checkout.cart.items.map((i) => ({
+        productId: i.productId,
+        productName: i.product.name,
+        brand: i.product.brand,
+        variantSku: i.variantSku,
+        attributes: i.variant.attributes,
+        quantity: i.quantity,
+        price: i.variant.priceAmount,
+        subtotal: i.variant.priceAmount * i.quantity,
+      }));
+      const total = itemsSnapshot.reduce((s, i) => s + i.subtotal, 0);
 
-      // Ensure order exists
-      const existing = await prisma.order.findUnique({
-        where: { checkoutId: checkout.id },
+      // Atomic transaction — same as confirmCheckout
+      await prisma.$transaction(async (tx) => {
+        // Decrement stock for each item
+        for (const item of checkout.cart.items) {
+          const variant = await tx.productVariant.findUnique({
+            where: { sku: item.variantSku },
+            select: { quantityAvailable: true },
+          });
+          if (variant && variant.quantityAvailable >= item.quantity) {
+            const remaining = variant.quantityAvailable - item.quantity;
+            await tx.productVariant.update({
+              where: { sku: item.variantSku },
+              data: {
+                quantityAvailable: { decrement: item.quantity },
+                availabilityStatus: remaining <= 0 ? "out_of_stock" : remaining <= 5 ? "low_stock" : "in_stock",
+              },
+            });
+          }
+        }
+
+        // Mark checkout paid
+        await tx.checkout.update({
+          where: { id: checkout.id },
+          data: { status: "paid", razorpayPaymentId: payment.id },
+        });
+
+        // Create or update order
+        const existing = await tx.order.findUnique({ where: { checkoutId: checkout.id } });
+        if (!existing) {
+          await tx.order.create({
+            data: {
+              checkoutId: checkout.id,
+              userId: checkout.userId,
+              status: "placed",
+              total,
+              itemsJson: itemsSnapshot,
+            },
+          });
+        } else {
+          await tx.order.update({
+            where: { checkoutId: checkout.id },
+            data: { status: "processing" },
+          });
+        }
+
+        // Mark cart checked out
+        await tx.cart.update({
+          where: { id: checkout.cartId },
+          data: { status: "checked_out" },
+        });
       });
-      if (!existing) {
-        await prisma.order.create({
-          data: {
-            checkoutId: checkout.id,
-            userId: checkout.userId,
-            status: "placed",
-            total: checkout.subtotal,
-            itemsJson: [],
-          },
-        });
-      } else {
-        await prisma.order.update({
-          where: { checkoutId: checkout.id },
-          data: { status: "processing" },
-        });
-      }
 
       await auditLog({
         userId: checkout.userId,
         action: "webhook.payment_captured",
-        payload: { razorpayOrderId, paymentId: payment.id },
+        payload: { razorpayOrderId, paymentId: payment.id, total },
       });
     }
   }

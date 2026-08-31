@@ -134,34 +134,6 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "get_upsell",
-      description: "Get upsell/cross-sell product suggestions based on a product the user just added to cart. Uses catalogue relationships (frequently_bought_with, complements) to suggest relevant add-ons that grow the order value.",
-      parameters: {
-        type: "object",
-        properties: {
-          productId: { type: "string", description: "The product ID that was just added to cart" },
-        },
-        required: ["productId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_upgrade",
-      description: "Find a better/premium version of a product the user is looking at. Uses the upgrade_to relationship in the catalogue. Use when user asks 'is there a better version', 'should I upgrade', 'show me the premium option'.",
-      parameters: {
-        type: "object",
-        properties: {
-          productId: { type: "string", description: "The product ID to find an upgrade for" },
-        },
-        required: ["productId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "search_discounts",
       description: "Find discounted products where the selling price is lower than MRP. Use when user asks for deals, discounts, sale items, or best value products.",
       parameters: {
@@ -216,16 +188,22 @@ CRITICAL RULES — NEVER BREAK THESE:
 CONVERSATION FLOW:
 
 STEP 1 — FIND PRODUCTS:
-When user wants products → call search_products immediately with limit=3.
+Before searching, check if the query has enough information:
+- A clear product type (bag, watch, shoes, shirt etc.) AND at least one of: budget, occasion, style, or specific use case → search immediately.
+- Vague query with only a product type and nothing else (e.g. "shoes", "bag", "something nice") → ask ONE short clarifying question. Max one question, max two options. Example: "Any budget in mind? And is this for office or casual use?"
+- Once user provides any additional detail → search immediately with what you have. Do not ask again.
+
+When searching → call search_products with limit=3.
 Only show products that were returned by the tool. Show max 3.
 End with: "Would you like to add one to your cart?"
+
+If search returns 0 results → retry with a broader query (remove subcategory/price filters, use just the main category keyword). Only say "not found" after two attempts both return 0 results.
 
 For deals/discounts → call search_discounts.
 For order history → call get_orders.
 
 STEP 2 — ADD TO CART:
 When user picks a product → call add_to_cart immediately.
-After success → call get_upsell with that productId.
 Show cart summary. Say: "Ready to checkout?"
 
 If add_to_cart returns OUT_OF_STOCK:
@@ -243,9 +221,12 @@ Only after YES → call create_checkout.
 OTHER RULES:
 - Max 3 products per response
 - Keep replies short — under 3 lines after product cards
+- NEVER use markdown tables. NEVER use | characters. Plain conversational text only.
+- NEVER use bullet points with - or *. Use plain sentences.
 - Never show SKUs or internal IDs
 - For out of stock → suggest alternatives immediately
-- For upgrades → call get_upgrade
+- When user asks "better version", "upgrade", "premium" → call search_products with similar query and higher price range
+- When user says "specs", "details", "tell me more" after seeing products → call get_product for ALL products shown, then summarise in plain text. Do not ask which one.
 - For items outside our categories (groceries, electronics, etc.) → say "Urban Store specialises in fashion, accessories, and bags. We don't carry [item]." Do NOT suggest alternatives you haven't searched for.`;
 
 
@@ -301,7 +282,10 @@ async function executeTool(
   name: string,
   args: Record<string, unknown>,
   userId: string,
-  agentGrantId?: string
+  agentGrantId?: string,
+  sessionId?: string,
+  isCheckoutConfirmed?: (sid: string) => boolean,
+  clearConfirmation?: (sid: string) => void
 ): Promise<string> {
   try {
     switch (name) {
@@ -366,62 +350,17 @@ async function executeTool(
       }
 
       case "create_checkout": {
-        const checkout = await createCheckout(userId, agentGrantId);
-        return JSON.stringify(checkout);
-      }
-
-      case "get_upsell": {
-        // Look up the product's relationships from DB
-        const product = await getProduct(args.productId as string);
-        if (!product) return JSON.stringify({ upsells: [] });
-
-        const relatedIds = [
-          ...(product.relationships?.frequentlyBoughtWith ?? []),
-          ...(product.relationships?.complements ?? []),
-        ].filter(Boolean).slice(0, 3);
-
-        if (relatedIds.length === 0) return JSON.stringify({ upsells: [] });
-
-        // Fetch those products
-        const upsells = await Promise.all(
-          relatedIds.map((id: string) => getProduct(id))
-        );
-        const available = upsells
-          .filter((p) => p && p.availability !== "out_of_stock")
-          .slice(0, 2);
-
-        return JSON.stringify({
-          upsells: available,
-          message: available.length > 0
-            ? `Customers who bought ${product.name} also loved these:`
-            : null,
-        });
-      }
-
-      case "get_upgrade": {
-        const product = await getProduct(args.productId as string);
-        if (!product) return JSON.stringify({ upgrade: null, message: "Product not found." });
-
-        // upgradeTo lives nested in relationships — use any cast since formatted product type is loose
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const upgradeIds: string[] = ((product as any).relationships?.upgradeTo) ?? [];
-        if (upgradeIds.length === 0) {
+        // ── Server-side gate: block if user hasn't explicitly confirmed ──────
+        if (isCheckoutConfirmed && sessionId && !isCheckoutConfirmed(sessionId)) {
           return JSON.stringify({
-            upgrade: null,
-            message: `${product.name} is already the top option in this range.`,
+            error: "CONFIRMATION_REQUIRED",
+            message: "Payment not confirmed. Ask the user to reply YES to confirm before proceeding.",
           });
         }
-
-        const upgrades = await Promise.all(upgradeIds.map((id: string) => getProduct(id)));
-        const available = upgrades.filter((p) => p && p.availability !== "out_of_stock");
-
-        return JSON.stringify({
-          upgrades: available,
-          currentProduct: { id: product.id, name: product.name, price: product.price },
-          message: available.length > 0
-            ? `There's a better version of ${product.name}:`
-            : `No upgrade available for ${product.name}.`,
-        });
+        const checkout = await createCheckout(userId, agentGrantId);
+        // Clear the confirmation after use — one-time gate
+        if (clearConfirmation && sessionId) clearConfirmation(sessionId);
+        return JSON.stringify(checkout);
       }
 
       case "search_discounts": {
@@ -567,7 +506,6 @@ function buildExplainBlock(userMessage: string, toolCalls: { name: string; args:
   const msg = userMessage.toLowerCase();
   const searchCall = toolCalls.find((t) => t.name === "search_products" || t.name === "search_discounts");
   const orderCall  = toolCalls.find((t) => t.name === "get_orders");
-  const upsellCall = toolCalls.find((t) => t.name === "get_upsell" || t.name === "get_upgrade");
 
   // ── Order history intent ──────────────────────────────────────────────────
   if (orderCall && !searchCall) {
@@ -579,20 +517,6 @@ function buildExplainBlock(userMessage: string, toolCalls: { name: string; args:
         filters: {},
         resultsFound: orders.length,
         semanticMatches: undefined,
-      },
-    };
-  }
-
-  // ── Upsell / upgrade intent ───────────────────────────────────────────────
-  if (upsellCall && !searchCall) {
-    const items = upsellCall.result?.upsells ?? upsellCall.result?.upgrades ?? [];
-    return {
-      understood: { intent: userMessage.slice(0, 80) },
-      search: {
-        query: upsellCall.name === "get_upgrade" ? "upgrade options" : "frequently bought together",
-        filters: {},
-        resultsFound: items.length,
-        semanticMatches: items.length,
       },
     };
   }
@@ -674,7 +598,10 @@ export async function runAgentTurn(
   userId: string,
   userMessage: string,
   history: ChatMessage[],
-  agentGrantId?: string
+  agentGrantId?: string,
+  sessionId?: string,
+  isCheckoutConfirmed?: (sid: string) => boolean,
+  clearConfirmation?: (sid: string) => void
 ): Promise<{ reply: string; updatedHistory: ChatMessage[]; products?: ProductCard[]; audit: AuditEntry[]; explain?: ExplainBlock }> {
   const messages: ChatMessage[] = [
     ...history,
@@ -747,7 +674,7 @@ Total orders placed: ${orders.length}`;
       audit.push({ timestamp: ts(), event: "TOOL_CALL", detail: { tool: toolName, args } });
 
       const t1 = Date.now();
-      const result = await executeTool(toolName, args, userId, agentGrantId);
+      const result = await executeTool(toolName, args, userId, agentGrantId, sessionId, isCheckoutConfirmed, clearConfirmation);
       const duration = Date.now() - t1;
 
       let parsedResult: unknown;

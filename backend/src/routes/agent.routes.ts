@@ -7,6 +7,35 @@ import { runAgentTurn, ChatMessage, ReasoningStep, AuditEntry, ExplainBlock } fr
 // In-memory session store (replace with Redis for production)
 const sessions = new Map<string, ChatMessage[]>();
 
+// ─── Server-side checkout confirmation gate ───────────────────────────────────
+// Tracks which sessions have explicitly said YES to a pending checkout.
+// This is a code-level guard — the LLM cannot bypass it regardless of prompt.
+const pendingCheckoutConfirmations = new Map<string, { amount: number; expiresAt: number }>();
+
+const YES_PATTERNS = /^\s*(yes|confirm|proceed|ok|sure|yep|yeah|go ahead|do it|pay|buy)\s*[.!]?\s*$/i;
+
+function sessionHasConfirmed(sessionId: string): boolean {
+  const entry = pendingCheckoutConfirmations.get(sessionId);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    pendingCheckoutConfirmations.delete(sessionId);
+    return false;
+  }
+  return true;
+}
+
+function markCheckoutConfirmed(sessionId: string, amount: number) {
+  // Confirmation valid for 5 minutes only
+  pendingCheckoutConfirmations.set(sessionId, {
+    amount,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  });
+}
+
+function clearCheckoutConfirmation(sessionId: string) {
+  pendingCheckoutConfirmations.delete(sessionId);
+}
+
 export async function agentRoutes(app: FastifyInstance) {
 
   // POST /api/v1/agent/chat
@@ -28,13 +57,34 @@ export async function agentRoutes(app: FastifyInstance) {
 
       const sessionId = body.data.sessionId ?? `${userId}-default`;
       const history = sessions.get(sessionId) ?? [];
+      const userMessage = body.data.message;
+
+      // ── Server-side YES gate ──────────────────────────────────────────────
+      // If the last agent message contained a checkout confirmation request
+      // AND this message is a YES → mark confirmed so the agent can proceed.
+      // The agent tool executor checks this before allowing create_checkout.
+      if (YES_PATTERNS.test(userMessage)) {
+        const lastMessages = history.slice(-4);
+        const agentAskedForConfirm = lastMessages.some(
+          (m) => m.role === "assistant" &&
+            (m.content.toLowerCase().includes("confirm") ||
+             m.content.toLowerCase().includes("reply yes") ||
+             m.content.toLowerCase().includes("type yes"))
+        );
+        if (agentAskedForConfirm) {
+          markCheckoutConfirmed(sessionId, 0);
+        }
+      }
 
       try {
         const { reply: agentReply, updatedHistory, products, audit, explain } = await runAgentTurn(
           userId,
-          body.data.message,
+          userMessage,
           history,
-          request.agent?.grantId
+          request.agent?.grantId,
+          sessionId,
+          (sid) => sessionHasConfirmed(sid),
+          (sid) => clearCheckoutConfirmation(sid)
         );
 
         sessions.set(sessionId, updatedHistory.slice(-20));

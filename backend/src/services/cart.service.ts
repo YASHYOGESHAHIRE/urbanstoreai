@@ -34,7 +34,7 @@ export async function getOrCreateCart(userId: string, agentGrantId?: string) {
   return formatCart(cart);
 }
 
-// ─── Add item ─────────────────────────────────────────────────────────────────
+// ─── Add item (Fix #5: atomic validate + upsert in single transaction) ────────
 
 export async function addToCart(
   userId: string,
@@ -43,65 +43,68 @@ export async function addToCart(
   quantity: number,
   agentGrantId?: string
 ) {
-  // Validate product + variant
-  const variant = await prisma.productVariant.findUnique({
-    where: { sku: variantSku },
-    include: { product: true },
-  });
-
-  if (!variant || variant.productId !== productId) {
-    throw new Error("INVALID_PRODUCT_OR_VARIANT");
-  }
-  if (variant.availabilityStatus === "out_of_stock") {
-    throw new Error("OUT_OF_STOCK");
-  }
-  if (quantity < 1 || quantity > variant.product.maxQtyPerOrder) {
-    throw new Error(`INVALID_QUANTITY:max=${variant.product.maxQtyPerOrder}`);
-  }
-
-  // Get or create cart
-  let cart = await prisma.cart.findFirst({
-    where: { userId, status: "active" },
-  });
-  if (!cart) {
-    cart = await prisma.cart.create({
-      data: { userId, agentGrantId, status: "active" },
+  const result = await prisma.$transaction(async (tx) => {
+    // Validate product + variant inside transaction
+    const variant = await tx.productVariant.findUnique({
+      where: { sku: variantSku },
+      include: { product: true },
     });
-  }
 
-  // Upsert item
-  const existing = await prisma.cartItem.findUnique({
-    where: { cartId_variantSku: { cartId: cart.id, variantSku } },
+    if (!variant || variant.productId !== productId) {
+      throw new Error("INVALID_PRODUCT_OR_VARIANT");
+    }
+    if (variant.availabilityStatus === "out_of_stock") {
+      throw new Error("OUT_OF_STOCK");
+    }
+    if (quantity < 1 || quantity > variant.product.maxQtyPerOrder) {
+      throw new Error(`INVALID_QUANTITY:max=${variant.product.maxQtyPerOrder}`);
+    }
+
+    // Get or create cart inside same transaction
+    let cart = await tx.cart.findFirst({
+      where: { userId, status: "active" },
+    });
+    if (!cart) {
+      cart = await tx.cart.create({
+        data: { userId, agentGrantId, status: "active" },
+      });
+    }
+
+    // Upsert cart item inside same transaction — no gap between check and write
+    const existing = await tx.cartItem.findUnique({
+      where: { cartId_variantSku: { cartId: cart.id, variantSku } },
+    });
+
+    if (existing) {
+      const newQty = Math.min(
+        existing.quantity + quantity,
+        variant.product.maxQtyPerOrder
+      );
+      await tx.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: newQty, updatedAt: new Date() },
+      });
+    } else {
+      await tx.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId,
+          variantSku,
+          quantity,
+          priceSnapshot: variant.priceAmount,
+          mrpSnapshot: variant.mrpAmount,
+        },
+      });
+    }
+
+    return cart.id;
   });
-
-  let item;
-  if (existing) {
-    const newQty = Math.min(
-      existing.quantity + quantity,
-      variant.product.maxQtyPerOrder
-    );
-    item = await prisma.cartItem.update({
-      where: { id: existing.id },
-      data: { quantity: newQty, updatedAt: new Date() },
-    });
-  } else {
-    item = await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        productId,
-        variantSku,
-        quantity,
-        priceSnapshot: variant.priceAmount,
-        mrpSnapshot: variant.mrpAmount,
-      },
-    });
-  }
 
   await auditLog({
     userId,
     agentGrantId,
     action: "cart.add",
-    payload: { productId, variantSku, quantity, cartId: cart.id },
+    payload: { productId, variantSku, quantity, cartId: result },
   });
 
   return getOrCreateCart(userId, agentGrantId);
@@ -177,6 +180,7 @@ export async function removeFromCart(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatCart(cart: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = (cart.items ?? []).map((item: any) => ({
     id: item.id,
     productId: item.productId,
@@ -190,14 +194,10 @@ function formatCart(cart: any) {
     subtotal: item.priceSnapshot * item.quantity,
   }));
 
-  const subtotal = items.reduce(
-    (sum: number, i: any) => sum + i.subtotal,
-    0
-  );
-  const savings = items.reduce(
-    (sum: number, i: any) => sum + (i.mrp - i.price) * i.quantity,
-    0
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subtotal = items.reduce((sum: number, i: any) => sum + i.subtotal, 0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const savings  = items.reduce((sum: number, i: any) => sum + (i.mrp - i.price) * i.quantity, 0);
 
   return {
     id: cart.id,
@@ -206,6 +206,7 @@ function formatCart(cart: any) {
     items,
     subtotal,
     savings,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     itemCount: items.reduce((s: number, i: any) => s + i.quantity, 0),
     currency: "INR",
   };

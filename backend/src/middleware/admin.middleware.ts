@@ -1,10 +1,13 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { getUserFromToken } from "../services/auth.service.js";
 import { COOKIE_NAME } from "./auth.middleware.js";
+import { prisma } from "../db/prisma.js";
 
 /**
  * Guard — requires user to be authenticated AND have isAdmin: true.
- * Reads the same HTTP-only session cookie as the regular auth middleware.
+ *
+ * Set ADMIN_OPEN=true in .env to bypass the isAdmin check (demo/dev only).
+ * Never set this in production.
  */
 export async function requireAdmin(
   request: FastifyRequest,
@@ -30,6 +33,18 @@ export async function requireAdmin(
     return;
   }
 
-  // Attach user to request for downstream use
+  // Skip isAdmin check only when ADMIN_OPEN=true (demo mode)
+  const adminOpen = process.env.ADMIN_OPEN === "true";
+  if (!adminOpen) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: sessionUser.id },
+      select: { isAdmin: true },
+    });
+    if (!dbUser?.isAdmin) {
+      reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required." });
+      return;
+    }
+  }
+
   request.user = sessionUser;
 }

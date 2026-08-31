@@ -205,3 +205,66 @@ export async function getProductAvailability(id: string) {
     })),
   };
 }
+
+// ─── Upsell — frequently bought with + complements ────────────────────────────
+
+export async function getUpsells(productId: string) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { name: true, frequentlyBoughtWith: true, complements: true },
+  });
+  if (!product) return { upsells: [] };
+
+  const relatedIds = [
+    ...product.frequentlyBoughtWith,
+    ...product.complements,
+  ].filter(Boolean).slice(0, 3);
+
+  if (relatedIds.length === 0) return { upsells: [] };
+
+  const related = await prisma.product.findMany({
+    where: {
+      id: { in: relatedIds },
+      variants: { some: { availabilityStatus: { in: ["in_stock", "low_stock"] } } },
+    },
+    include: { variants: true },
+    take: 2,
+  });
+
+  return {
+    upsells: related.map(formatProduct),
+    message: `Customers who bought ${product.name} also loved these:`,
+  };
+}
+
+// ─── Upgrade — upgrade_to relationships ──────────────────────────────────────
+
+export async function getUpgrades(productId: string) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { name: true, upgradeTo: true, variants: { select: { priceAmount: true } } },
+  });
+  if (!product) return { upgrade: null, message: "Product not found." };
+
+  if (product.upgradeTo.length === 0) {
+    return { upgrade: null, message: `${product.name} is already the top option in this range.` };
+  }
+
+  const upgrades = await prisma.product.findMany({
+    where: {
+      id: { in: product.upgradeTo },
+      variants: { some: { availabilityStatus: { in: ["in_stock", "low_stock"] } } },
+    },
+    include: { variants: true },
+  });
+
+  const currentPrice = Math.min(...(product.variants.map((v) => v.priceAmount)));
+
+  return {
+    upgrades: upgrades.map(formatProduct),
+    currentPrice,
+    message: upgrades.length > 0
+      ? `There's a better version of ${product.name}:`
+      : `No upgrade available for ${product.name}.`,
+  };
+}

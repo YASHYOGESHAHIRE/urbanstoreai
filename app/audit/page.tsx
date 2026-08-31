@@ -8,7 +8,7 @@ import {
   CheckCircle, MessageSquare, Search, Shield,
   Zap, User, Package,
 } from "lucide-react";
-import { loadAuditSession, clearAuditSession, AuditEntry, AuditSession } from "@/lib/auditStore";
+import { loadAuditSession, loadAllSessions, clearAuditSession, AuditEntry, AuditSession } from "@/lib/auditStore";
 
 // ─── Event config ─────────────────────────────────────────────────────────────
 
@@ -292,17 +292,33 @@ function StatsBar({ entries }: { entries: AuditEntry[] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AuditPage() {
+  const [allSessions, setAllSessions] = useState<AuditSession[]>([]);
   const [session, setSession] = useState<AuditSession | null>(null);
   const [filter, setFilter] = useState("ALL");
 
+  const refresh = () => {
+    const sessions = loadAllSessions();
+    setAllSessions(sessions);
+    // Default to most recent session
+    setSession((prev) => {
+      if (prev) {
+        // Keep showing same session but with updated entries
+        const updated = sessions.find((s) => s.sessionId === prev.sessionId);
+        return updated ?? sessions[sessions.length - 1] ?? null;
+      }
+      return sessions[sessions.length - 1] ?? null;
+    });
+  };
+
   useEffect(() => {
-    setSession(loadAuditSession());
-    const handler = (e: Event) => {
-      const ev = e as CustomEvent<AuditSession | null>;
-      setSession(ev.detail);
-    };
+    refresh();
+    const handler = () => refresh();
     window.addEventListener("urban_audit_update", handler);
-    return () => window.removeEventListener("urban_audit_update", handler);
+    window.addEventListener("urban_audit_sessions_update", handler);
+    return () => {
+      window.removeEventListener("urban_audit_update", handler);
+      window.removeEventListener("urban_audit_sessions_update", handler);
+    };
   }, []);
 
   const entries = session?.entries ?? [];
@@ -334,21 +350,43 @@ export default function AuditPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setSession(loadAuditSession())}
+            <button onClick={refresh}
               className="flex items-center gap-1.5 px-3 h-8 border border-gray-200 rounded-xl text-[12px] text-gray-500 hover:border-gray-900 hover:text-black transition-colors font-medium">
               <RefreshCw size={12} />
               Refresh
             </button>
-            <button onClick={() => { clearAuditSession(); setSession(null); }}
+            <button onClick={() => { clearAuditSession(); setSession(null); setAllSessions([]); }}
               className="flex items-center gap-1.5 px-3 h-8 border border-gray-200 rounded-xl text-[12px] text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors font-medium">
               <Trash2 size={12} />
-              Clear
+              Clear All
             </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-[900px] mx-auto px-6 py-8">
+
+        {/* Session switcher */}
+        {allSessions.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+            {[...allSessions].reverse().map((s, i) => {
+              const isActive = s.sessionId === session?.sessionId;
+              const label = i === 0 ? "Latest" : `Session ${allSessions.length - i}`;
+              const time = new Date(s.startedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <button key={s.sessionId} onClick={() => { setSession(s); setFilter("ALL"); }}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+                    isActive
+                      ? "bg-black text-white"
+                      : "bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-gray-900"
+                  }`}>
+                  {label} · {time} · {s.entries.length} events
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 gap-4 text-center">
             <div className="w-16 h-16 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm">

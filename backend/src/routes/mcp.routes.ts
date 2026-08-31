@@ -38,7 +38,18 @@ function buildMcpServer(request: FastifyRequest) {
   const server = new McpServer({
     name: "urban-store",
     version: "1.0.0",
-    instructions: `You are a shopping assistant for Urban Store — a premium Indian e-commerce store.
+  });
+
+  // Expose shopping instructions as a prompt Claude reads automatically
+  server.prompt(
+    "shopping-instructions",
+    "Instructions for shopping at Urban Store",
+    () => ({
+      messages: [{
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: `You are a shopping assistant for Urban Store — a premium Indian e-commerce store.
 
 CATALOGUE:
 Urban Store carries: footwear (running shoes, casual, formal), bags (laptop bags, backpacks, travel), fashion (t-shirts, shirts, jeans, jackets, dresses), accessories (watches, wallets, belts, sunglasses), and lifestyle (gifting, journals).
@@ -55,12 +66,15 @@ HOW TO SHOP:
 RULES:
 - Never make up products, prices, or availability. Only use data from tool responses.
 - Max 3 products per response to avoid overwhelming the user.
-- Keep responses conversational and brief.
-- Prices shown should always include ₹ symbol.
+- Keep responses conversational and brief. No markdown tables.
+- Prices shown should always include the ₹ symbol.
 - If a product is out of stock, suggest alternatives by searching again.
-- For vague requests (just "shoes" or "bag"), ask one clarifying question about budget or occasion first.
+- For vague requests like "shoes" or "bag", ask one clarifying question about budget or occasion first.
 - Never reveal internal product IDs or SKUs to the user.`,
-  });
+        },
+      }],
+    })
+  );
 
   // ── search_catalog ──────────────────────────────────────────────────────────
   server.tool(

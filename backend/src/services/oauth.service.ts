@@ -4,7 +4,7 @@ import { prisma } from "../db/prisma.js";
 
 // Token lifetimes
 const AUTH_CODE_TTL_MS = 10 * 60 * 1000;         // 10 minutes
-const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;       // 1 hour
+const ACCESS_TOKEN_TTL_MS = 8 * 60 * 60 * 1000;  // 8 hours (was 1 hour — too short for Claude sessions)
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // All supported scopes
@@ -121,11 +121,17 @@ export async function createAuthCode(
   requestedScopes: string[],
   redirectUri: string
 ) {
-  const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
+  // Use getClientById so CIMD URLs and dynamic registrations are handled
+  const client = await getClientById(clientId);
   if (!client) throw new Error("CLIENT_NOT_FOUND");
 
-  // Validate redirect URI
-  if (!client.redirectUris.includes(redirectUri)) {
+  // Validate redirect URI — allow any claude.ai callback for CIMD clients
+  const isClaude = client.clientId.startsWith("https://") ||
+    client.redirectUris.some(u => u.includes("claude.ai"));
+  const isValidRedirect = client.redirectUris.includes(redirectUri) ||
+    (isClaude && redirectUri.includes("claude.ai"));
+
+  if (!isValidRedirect) {
     throw new Error("INVALID_REDIRECT_URI");
   }
 
@@ -158,7 +164,8 @@ export async function exchangeAuthCode(
   clientSecret: string,
   redirectUri: string
 ) {
-  const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
+  // Use getClientById so CIMD/dynamic clients are found
+  const client = await getClientById(clientId);
   if (!client) throw new Error("INVALID_CLIENT");
 
   // Skip secret check for public clients (CIMD — empty secret)
@@ -172,7 +179,13 @@ export async function exchangeAuthCode(
   if (authCode.used) throw new Error("CODE_ALREADY_USED");
   if (authCode.expiresAt < new Date()) throw new Error("CODE_EXPIRED");
   if (authCode.clientId !== client.id) throw new Error("INVALID_CODE");
-  if (authCode.redirectUri !== redirectUri) throw new Error("INVALID_REDIRECT_URI");
+
+  // Allow any claude.ai redirect for CIMD clients
+  const isClaude = client.clientId.startsWith("https://") ||
+    client.redirectUris.some(u => u.includes("claude.ai"));
+  if (!isClaude && authCode.redirectUri !== redirectUri) {
+    throw new Error("INVALID_REDIRECT_URI");
+  }
 
   // Mark code as used — one-time only
   await prisma.oAuthAuthCode.update({
@@ -217,7 +230,7 @@ export async function refreshAccessToken(
   clientId: string,
   clientSecret: string
 ) {
-  const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
+  const client = await getClientById(clientId);
   if (!client) throw new Error("INVALID_CLIENT");
 
   // Skip secret check for public clients (CIMD)

@@ -21,6 +21,8 @@ const AuthorizeQuerySchema = z.object({
   redirect_uri: z.string().url(),
   scope: z.string().default("profile"),
   state: z.string().optional(),
+  code_challenge: z.string().optional(),
+  code_challenge_method: z.string().optional(),
 });
 
 const TokenBodySchema = z.discriminatedUnion("grant_type", [
@@ -28,14 +30,15 @@ const TokenBodySchema = z.discriminatedUnion("grant_type", [
     grant_type: z.literal("authorization_code"),
     code: z.string(),
     client_id: z.string(),
-    client_secret: z.string(),
+    client_secret: z.string().optional().default(""),
     redirect_uri: z.string().url(),
+    code_verifier: z.string().optional(),
   }),
   z.object({
     grant_type: z.literal("refresh_token"),
     refresh_token: z.string(),
     client_id: z.string(),
-    client_secret: z.string(),
+    client_secret: z.string().optional().default(""),
   }),
 ]);
 
@@ -85,7 +88,7 @@ export async function oauthRoutes(app: FastifyInstance) {
         });
       }
 
-      const { client_id, redirect_uri, scope, state, response_type } =
+      const { client_id, redirect_uri, scope, state, response_type, code_challenge, code_challenge_method } =
         query.data;
 
       // Validate client exists
@@ -94,8 +97,13 @@ export async function oauthRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "invalid_client" });
       }
 
-      // Validate redirect URI
-      if (!client.redirectUris.includes(redirect_uri)) {
+      // Validate redirect URI — allow any claude.ai URL for CIMD/dynamic clients
+      const isClaude = client.clientId.startsWith("https://") ||
+        redirect_uri.includes("claude.ai");
+      const isValidRedirect = client.redirectUris.includes(redirect_uri) ||
+        (isClaude && redirect_uri.startsWith("https://claude.ai"));
+
+      if (!isValidRedirect) {
         return reply.code(400).send({ error: "invalid_redirect_uri" });
       }
 
@@ -124,6 +132,8 @@ export async function oauthRoutes(app: FastifyInstance) {
         validScopes: VALID_SCOPES,
         redirectUri: redirect_uri,
         state,
+        codeChallenge: code_challenge,
+        codeChallengeMethod: code_challenge_method,
       });
     }
   );
@@ -147,6 +157,8 @@ export async function oauthRoutes(app: FastifyInstance) {
           redirect_uri: z.string().url(),
           scopes: z.array(z.string()),
           state: z.string().optional(),
+          code_challenge: z.string().optional(),
+          code_challenge_method: z.string().optional(),
         })
         .safeParse(request.body);
 
@@ -154,14 +166,16 @@ export async function oauthRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "invalid_request" });
       }
 
-      const { client_id, redirect_uri, scopes, state } = body.data;
+      const { client_id, redirect_uri, scopes, state, code_challenge, code_challenge_method } = body.data;
 
       try {
         const code = await createAuthCode(
           client_id,
           request.user.id,
           scopes,
-          redirect_uri
+          redirect_uri,
+          code_challenge,
+          code_challenge_method
         );
 
         const redirectUrl = new URL(redirect_uri);
@@ -224,8 +238,9 @@ export async function oauthRoutes(app: FastifyInstance) {
         const tokens = await exchangeAuthCode(
           body.data.code,
           body.data.client_id,
-          body.data.client_secret,
-          body.data.redirect_uri
+          body.data.client_secret ?? "",
+          body.data.redirect_uri,
+          body.data.code_verifier
         );
         return reply.send(tokens);
       }

@@ -61,16 +61,18 @@ model OAuthClient {
 }
 
 model OAuthAuthCode {
-  id          String      @id @default(cuid())
-  code        String      @unique
-  clientId    String
-  userId      String
-  scopes      String[]
-  redirectUri String
-  expiresAt   DateTime
-  used        Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  client      OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                  String      @id @default(cuid())
+  code                String      @unique
+  clientId            String
+  userId              String
+  scopes              String[]
+  redirectUri         String
+  expiresAt           DateTime
+  used                Boolean     @default(false)
+  codeChallenge       String?
+  codeChallengeMethod String?
+  createdAt           DateTime    @default(now())
+  client              OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@map("oauth_auth_codes")

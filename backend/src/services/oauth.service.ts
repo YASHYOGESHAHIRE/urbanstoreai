@@ -119,9 +119,10 @@ export async function createAuthCode(
   clientId: string,
   userId: string,
   requestedScopes: string[],
-  redirectUri: string
+  redirectUri: string,
+  codeChallenge?: string,
+  codeChallengeMethod?: string
 ) {
-  // Use getClientById so CIMD URLs and dynamic registrations are handled
   const client = await getClientById(clientId);
   if (!client) throw new Error("CLIENT_NOT_FOUND");
 
@@ -129,7 +130,7 @@ export async function createAuthCode(
   const isClaude = client.clientId.startsWith("https://") ||
     client.redirectUris.some(u => u.includes("claude.ai"));
   const isValidRedirect = client.redirectUris.includes(redirectUri) ||
-    (isClaude && redirectUri.includes("claude.ai"));
+    (isClaude && redirectUri.startsWith("https://claude.ai"));
 
   if (!isValidRedirect) {
     throw new Error("INVALID_REDIRECT_URI");
@@ -150,6 +151,11 @@ export async function createAuthCode(
       scopes: allowedScopes,
       redirectUri,
       expiresAt: new Date(Date.now() + AUTH_CODE_TTL_MS),
+      // Store PKCE challenge if provided
+      ...(codeChallenge ? {
+        codeChallenge,
+        codeChallengeMethod: codeChallengeMethod ?? "S256",
+      } : {}),
     },
   });
 
@@ -162,9 +168,9 @@ export async function exchangeAuthCode(
   code: string,
   clientId: string,
   clientSecret: string,
-  redirectUri: string
+  redirectUri: string,
+  codeVerifier?: string
 ) {
-  // Use getClientById so CIMD/dynamic clients are found
   const client = await getClientById(clientId);
   if (!client) throw new Error("INVALID_CLIENT");
 
@@ -187,12 +193,24 @@ export async function exchangeAuthCode(
     throw new Error("INVALID_REDIRECT_URI");
   }
 
+  // Verify PKCE code_verifier if challenge was stored
+  if (authCode.codeChallenge) {
+    if (!codeVerifier) throw new Error("CODE_VERIFIER_REQUIRED");
+    // SHA-256 hash the verifier and compare to stored challenge
+    const hash = crypto
+      .createHash("sha256")
+      .update(codeVerifier)
+      .digest("base64url");
+    if (hash !== authCode.codeChallenge) {
+      throw new Error("INVALID_CODE_VERIFIER");
+    }
+  }
+
   // Mark code as used — one-time only
   await prisma.oAuthAuthCode.update({
     where: { id: authCode.id },
     data: { used: true },
   });
-
   // Issue tokens
   const accessToken = generateToken(32);
   const refreshToken = generateToken(32);

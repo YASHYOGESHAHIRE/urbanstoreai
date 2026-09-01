@@ -55,6 +55,10 @@ function AuthorizeContent() {
     });
     const state = params.get("state");
     if (state) query.set("state", state);
+    const codeChallenge = params.get("code_challenge");
+    if (codeChallenge) query.set("code_challenge", codeChallenge);
+    const codeChallengeMethod = params.get("code_challenge_method");
+    if (codeChallengeMethod) query.set("code_challenge_method", codeChallengeMethod);
 
     fetch(`${BACKEND}/oauth/authorize?${query}`, { headers: { ...authHeaders() } })
       .then((r) => r.json())
@@ -78,6 +82,8 @@ function AuthorizeContent() {
           redirect_uri: consent.redirectUri,
           scopes: consent.requestedScopes,
           state: consent.state,
+          code_challenge: consent.codeChallenge,
+          code_challenge_method: consent.codeChallengeMethod,
         }),
       });
       const data = await res.json();

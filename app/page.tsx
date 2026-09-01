@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import CategoryNav from "@/components/CategoryNav";
@@ -16,18 +15,6 @@ export default function Home() {
   const [aiQuery, setAiQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [cartCount, setCartCount] = useState(0);
-  const searchParams = useSearchParams();
-  const handledCheckout = useRef(false);
-
-  // When Claude sends user here with ?checkout=ID, open AI panel and trigger payment
-  useEffect(() => {
-    const checkoutId = searchParams.get("checkout");
-    if (checkoutId && !handledCheckout.current) {
-      handledCheckout.current = true;
-      setAiOpen(true);
-      setAiQuery(`complete payment for checkout ${checkoutId}`);
-    }
-  }, [searchParams]);
 
   const filteredProducts = useMemo(() => {
     if (activeCategory === "All") return products;

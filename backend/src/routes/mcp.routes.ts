@@ -212,7 +212,7 @@ Error codes: EMPTY_CART, POLICY_REJECTED, CONFIRMATION_REQUIRED.`,
       try {
         const result = await createCheckout(user.id);
         const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
-        const paymentUrl = result.paymentUrl ?? `${frontendUrl}/?checkout=${result.checkoutId}`;
+        const paymentUrl = result.paymentUrl ?? `${frontendUrl}/pay/${result.checkoutId}`;
         return text({
           ...result,
           paymentUrl,

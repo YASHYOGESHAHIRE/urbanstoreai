@@ -613,37 +613,6 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return;
 
-    // Intercept checkout payment URL — show Razorpay modal directly
-    const checkoutMatch = text.match(/complete payment for checkout ([a-z0-9]+)/i);
-    if (checkoutMatch) {
-      const checkoutId = checkoutMatch[1];
-      setHasStarted(true);
-      setLoading(true);
-      try {
-        const res = await fetch(`${BACKEND}/api/v1/checkout/${checkoutId}`, {
-          headers: { ...authHeaders() },
-        });
-        if (res.ok) {
-          const checkout = await res.json();
-          setMessages((prev) => [...prev, {
-            id: Date.now().toString(), role: "ai",
-            text: "Complete your payment below.",
-            time: getTime(),
-            checkout: {
-              checkoutId: checkout.id,
-              subtotal: checkout.subtotal,
-              razorpayOrderId: checkout.razorpayOrderId,
-              razorpayKeyId: checkout.razorpayKeyId ?? process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "",
-              requiresConfirmation: false,
-              policyWarnings: [],
-            },
-          }]);
-          return;
-        }
-      } catch { /* fall through to agent */ }
-      finally { setLoading(false); }
-    }
-
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: text.trim(), time: getTime() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");

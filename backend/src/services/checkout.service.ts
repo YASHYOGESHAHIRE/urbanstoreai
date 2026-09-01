@@ -88,8 +88,8 @@ export async function createCheckout(userId: string, agentGrantId?: string) {
     requiresConfirmation: policy.requiresConfirmation,
     policyWarnings: policy.issues.filter((i) => i.type === "warning"),
     status: "confirmed",
-    paymentUrl: `${frontendUrl}/?checkout=${checkout.id}`,
-    message: `Payment ready. Ask the user to visit this URL to complete payment: ${frontendUrl}/?checkout=${checkout.id}`,
+    paymentUrl: `${frontendUrl}/pay/${checkout.id}`,
+    message: `Payment ready. Ask the user to visit this URL to complete payment: ${frontendUrl}/pay/${checkout.id}`,
   };
 }
 

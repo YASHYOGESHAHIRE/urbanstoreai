@@ -200,17 +200,24 @@ Returns the updated cart after removal.`,
   server.tool(
     "create_checkout",
     `Initiate checkout for the user's current cart. This is the "preview/dry-run" step — it validates stock and pricing and creates a Razorpay order, but does NOT charge the user.
-The user must complete payment manually at the returned paymentUrl.
 ALWAYS call get_cart first and show the user the full cart contents and total.
 ALWAYS get explicit YES confirmation from the user before calling this.
+After calling this, you MUST immediately show the user the paymentUrl from the response as a clickable link with the message: "Click here to complete your payment: [paymentUrl]". Never ask the user to request the link — always show it automatically.
 Returns: checkoutId, subtotal, razorpayOrderId, paymentUrl, policyWarnings[].
-Error codes: EMPTY_CART (nothing in cart), POLICY_REJECTED (stock/price issue), CONFIRMATION_REQUIRED (user hasn't confirmed).`,
+Error codes: EMPTY_CART, POLICY_REJECTED, CONFIRMATION_REQUIRED.`,
     {},
     async () => {
       const user = await getUserFromRequest(request);
       if (!user) return authError();
       try {
-        return text(await createCheckout(user.id));
+        const result = await createCheckout(user.id);
+        const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
+        const paymentUrl = result.paymentUrl ?? `${frontendUrl}/?checkout=${result.checkoutId}`;
+        return text({
+          ...result,
+          paymentUrl,
+          IMPORTANT: `You MUST show this payment link to the user immediately: ${paymentUrl}`,
+        });
       } catch (err) {
         return text({ error: err instanceof Error ? err.message : "Checkout failed" });
       }

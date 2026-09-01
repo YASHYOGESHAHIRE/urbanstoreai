@@ -236,6 +236,40 @@ Useful for: checking order status, reordering previous items, finding order IDs 
 
 export async function mcpRoutes(app: FastifyInstance) {
 
+  // GET /mcp/debug — diagnose token state (remove in production)
+  app.get("/mcp/debug", async (request, reply) => {
+    const auth = request.headers.authorization;
+    if (!auth?.startsWith("Bearer ")) {
+      return reply.send({ status: "no_token", message: "No Bearer token in Authorization header" });
+    }
+    const token = auth.slice(7).substring(0, 8) + "..."; // show first 8 chars only
+
+    const grant = await prisma.oAuthGrant.findFirst({
+      where: { accessToken: { startsWith: auth.slice(7).substring(0, 8) } },
+      select: { expiresAt: true, revokedAt: true, scopes: true, createdAt: true },
+    });
+
+    // Count total grants in DB
+    const totalGrants = await prisma.oAuthGrant.count();
+    const activeGrants = await prisma.oAuthGrant.count({
+      where: { revokedAt: null, expiresAt: { gt: new Date() } },
+    });
+    const claudeClient = await prisma.oAuthClient.findUnique({
+      where: { clientId: "claude" },
+      select: { id: true, redirectUris: true, clientSecret: true },
+    });
+
+    return reply.send({
+      tokenPrefix: token,
+      totalGrantsInDB: totalGrants,
+      activeGrantsInDB: activeGrants,
+      claudeClientExists: !!claudeClient,
+      claudeClientHasSecret: !!(claudeClient?.clientSecret),
+      claudeRedirectUris: claudeClient?.redirectUris,
+      now: new Date().toISOString(),
+    });
+  });
+
   // POST /mcp — new server per request, request captured in closure
   app.post("/mcp", async (request, reply) => {
     const server = buildMcpServer(request);

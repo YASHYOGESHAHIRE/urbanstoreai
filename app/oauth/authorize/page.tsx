@@ -22,6 +22,8 @@ interface ConsentData {
   requestedScopes: string[];
   redirectUri: string;
   state?: string;
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
 }
 
 // ─── Inner component (needs useSearchParams, must be inside Suspense) ─────────

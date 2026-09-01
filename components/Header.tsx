@@ -28,12 +28,15 @@ export default function Header({ onAIToggle, aiOpen, cartCount = 0 }: HeaderProp
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <header className={`sticky top-0 z-50 bg-white border-b border-gray-200 transition-all duration-300 ${aiOpen ? "pr-[444px]" : ""}`}>
         <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between gap-6">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <span className="text-[15px] font-black tracking-tight text-black uppercase">
-              Urban Store
+          {/* Logo — two-line stacked, left-aligned */}
+          <div className="flex-shrink-0 flex flex-col leading-[1.1]">
+            <span className="text-[16px] font-black tracking-tight text-black uppercase">
+              Urban
+            </span>
+            <span className="text-[16px] font-black tracking-tight text-[#22c55e] uppercase">
+              Store
             </span>
           </div>
 

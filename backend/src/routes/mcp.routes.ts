@@ -239,34 +239,66 @@ export async function mcpRoutes(app: FastifyInstance) {
   // GET /mcp/debug — diagnose token state (remove in production)
   app.get("/mcp/debug", async (request, reply) => {
     const auth = request.headers.authorization;
-    if (!auth?.startsWith("Bearer ")) {
-      return reply.send({ status: "no_token", message: "No Bearer token in Authorization header" });
-    }
-    const token = auth.slice(7).substring(0, 8) + "..."; // show first 8 chars only
+    const hasToken = auth?.startsWith("Bearer ");
 
-    const grant = await prisma.oAuthGrant.findFirst({
-      where: { accessToken: { startsWith: auth.slice(7).substring(0, 8) } },
-      select: { expiresAt: true, revokedAt: true, scopes: true, createdAt: true },
-    });
-
-    // Count total grants in DB
+    // Count grants in DB
     const totalGrants = await prisma.oAuthGrant.count();
     const activeGrants = await prisma.oAuthGrant.count({
       where: { revokedAt: null, expiresAt: { gt: new Date() } },
     });
+    const expiredGrants = await prisma.oAuthGrant.count({
+      where: { expiresAt: { lt: new Date() } },
+    });
+
+    // Recent grants
+    const recentGrants = await prisma.oAuthGrant.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        accessToken: true,
+        expiresAt: true,
+        revokedAt: true,
+        scopes: true,
+        createdAt: true,
+        client: { select: { clientId: true, name: true } },
+      },
+    });
+
+    // Claude client state
     const claudeClient = await prisma.oAuthClient.findUnique({
       where: { clientId: "claude" },
-      select: { id: true, redirectUris: true, clientSecret: true },
+      select: { id: true, redirectUris: true, clientSecret: true, scopes: true },
+    });
+
+    // All OAuth clients
+    const allClients = await prisma.oAuthClient.findMany({
+      select: { clientId: true, name: true, redirectUris: true },
     });
 
     return reply.send({
-      tokenPrefix: token,
-      totalGrantsInDB: totalGrants,
-      activeGrantsInDB: activeGrants,
-      claudeClientExists: !!claudeClient,
-      claudeClientHasSecret: !!(claudeClient?.clientSecret),
-      claudeRedirectUris: claudeClient?.redirectUris,
       now: new Date().toISOString(),
+      incomingToken: hasToken ? "present" : "absent",
+      grants: {
+        total: totalGrants,
+        active: activeGrants,
+        expired: expiredGrants,
+      },
+      recentGrants: recentGrants.map(g => ({
+        tokenPrefix: g.accessToken.substring(0, 12) + "...",
+        client: g.client.clientId,
+        scopes: g.scopes,
+        createdAt: g.createdAt,
+        expiresAt: g.expiresAt,
+        expired: g.expiresAt < new Date(),
+        revoked: !!g.revokedAt,
+      })),
+      claudeClient: claudeClient ? {
+        exists: true,
+        hasSecret: !!claudeClient.clientSecret,
+        redirectUris: claudeClient.redirectUris,
+        scopes: claudeClient.scopes,
+      } : { exists: false },
+      allClients: allClients.map(c => ({ clientId: c.clientId, name: c.name })),
     });
   });
 

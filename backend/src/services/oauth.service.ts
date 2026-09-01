@@ -28,65 +28,6 @@ function validateScopes(requested: string[]): Scope[] {
   );
 }
 
-// ─── CIMD: Anthropic hosted client metadata ───────────────────────────────────
-// Fetches and caches client metadata from Anthropic's CIMD URL.
-// This lets Claude connect without the user needing to enter any credentials.
-
-const CIMD_CACHE = new Map<string, { data: CIMDMetadata; fetchedAt: number }>();
-const CIMD_TTL_MS = 60 * 60 * 1000; // cache for 1 hour
-
-interface CIMDMetadata {
-  client_id: string;
-  client_name: string;
-  redirect_uris: string[];
-  token_endpoint_auth_method?: string;
-  logo_uri?: string;
-}
-
-async function fetchCIMD(cimdUrl: string): Promise<CIMDMetadata | null> {
-  const cached = CIMD_CACHE.get(cimdUrl);
-  if (cached && Date.now() - cached.fetchedAt < CIMD_TTL_MS) {
-    return cached.data;
-  }
-  try {
-    const res = await fetch(cimdUrl, {
-      headers: { "Accept": "application/json" },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json() as CIMDMetadata;
-    CIMD_CACHE.set(cimdUrl, { data, fetchedAt: Date.now() });
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-// Auto-register a CIMD client in the DB on first use
-async function getOrRegisterCIMDClient(cimdUrl: string) {
-  // Check if already registered
-  const existing = await prisma.oAuthClient.findUnique({
-    where: { clientId: cimdUrl },
-  });
-  if (existing) return existing;
-
-  // Fetch metadata from Anthropic
-  const meta = await fetchCIMD(cimdUrl);
-  if (!meta) return null;
-
-  // Register as a public client (no secret — token_endpoint_auth_method: none)
-  return prisma.oAuthClient.create({
-    data: {
-      name: meta.client_name ?? "Claude",
-      clientId: cimdUrl, // use CIMD URL as stable client_id
-      clientSecret: "", // public client — no secret
-      redirectUris: meta.redirect_uris ?? ["https://claude.ai/api/mcp/auth_callback"],
-      scopes: [...VALID_SCOPES],
-      logoUrl: meta.logo_uri,
-    },
-  });
-}
-
 // ─── Client validation ────────────────────────────────────────────────────────
 
 export async function validateClient(
@@ -101,13 +42,14 @@ export async function validateClient(
 }
 
 export async function getClientById(clientId: string) {
-  // Standard DB lookup first
+  // Standard DB lookup
   const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
   if (client) return client;
 
-  // If clientId looks like a CIMD URL, auto-register it
-  if (clientId.startsWith("https://")) {
-    return getOrRegisterCIMDClient(clientId);
+  // If clientId looks like a CIMD URL (Anthropic hosted metadata),
+  // map it to our stable "claude" public client — no DB row per user.
+  if (clientId.startsWith("https://") && clientId.includes("anthropic")) {
+    return prisma.oAuthClient.findUnique({ where: { clientId: "claude" } });
   }
 
   return null;

@@ -358,8 +358,8 @@ export async function oauthRoutes(app: FastifyInstance) {
 
   /**
    * POST /oauth/register
-   * Dynamic Client Registration (RFC 7591) — accepts Anthropic's CIMD client.
-   * Only allows registration of clients whose metadata URL is from anthropic.com.
+   * Dynamic Client Registration — always returns the stable "claude" public client.
+   * This avoids creating a new DB row per user while still satisfying Claude's DCR flow.
    */
   app.post("/oauth/register", async (request, reply) => {
     const body = z.object({
@@ -367,7 +367,6 @@ export async function oauthRoutes(app: FastifyInstance) {
       redirect_uris: z.array(z.string()).optional(),
       token_endpoint_auth_method: z.string().optional(),
       logo_uri: z.string().optional(),
-      client_uri: z.string().optional(),
       scope: z.string().optional(),
     }).safeParse(request.body);
 
@@ -375,28 +374,39 @@ export async function oauthRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "invalid_client_metadata" });
     }
 
-    const { client_name, redirect_uris, token_endpoint_auth_method, logo_uri } = body.data;
-
-    // Generate a unique client_id for this registration
-    const clientId = `dyn_${crypto.randomBytes(16).toString("hex")}`;
-
+    // Always return the stable claude client — no new rows, no secrets
+    // This is safe: the client is public (no secret), and redirect URIs
+    // are validated at authorize time to only allow claude.ai domains.
     const { prisma } = app;
-    const client = await prisma.oAuthClient.create({
-      data: {
-        name: client_name ?? "Claude",
-        clientId,
-        clientSecret: "", // public client
-        redirectUris: redirect_uris ?? ["https://claude.ai/api/mcp/auth_callback"],
+    const client = await prisma.oAuthClient.upsert({
+      where: { clientId: "claude" },
+      update: {
+        // Keep redirect URIs fresh — add any new ones Claude sends
+        redirectUris: [
+          "https://claude.ai/api/mcp/auth_callback",
+          "https://claude.ai/oauth/callback",
+          ...(body.data.redirect_uris ?? []),
+        ].filter((v, i, a) => a.indexOf(v) === i), // dedupe
+      },
+      create: {
+        name: "Claude",
+        clientId: "claude",
+        clientSecret: "", // public client — no secret
+        redirectUris: [
+          "https://claude.ai/api/mcp/auth_callback",
+          "https://claude.ai/oauth/callback",
+          ...(body.data.redirect_uris ?? []),
+        ].filter((v, i, a) => a.indexOf(v) === i),
         scopes: ["profile", "cart:read", "cart:write", "orders:read", "checkout"],
-        logoUrl: logo_uri,
+        logoUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Claude_AI_logo.svg",
       },
     });
 
     return reply.code(201).send({
-      client_id: client.clientId,
+      client_id: client.clientId, // always "claude"
       client_name: client.name,
       redirect_uris: client.redirectUris,
-      token_endpoint_auth_method: token_endpoint_auth_method ?? "none",
+      token_endpoint_auth_method: "none", // public client
       scope: "profile cart:read cart:write orders:read checkout",
     });
   });

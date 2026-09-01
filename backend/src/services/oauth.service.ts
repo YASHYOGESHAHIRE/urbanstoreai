@@ -4,7 +4,7 @@ import { prisma } from "../db/prisma.js";
 
 // Token lifetimes
 const AUTH_CODE_TTL_MS = 10 * 60 * 1000;         // 10 minutes
-const ACCESS_TOKEN_TTL_MS = 8 * 60 * 60 * 1000;  // 8 hours (was 1 hour — too short for Claude sessions)
+const ACCESS_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // All supported scopes

@@ -12,7 +12,7 @@
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { getUserFromToken } from "../services/auth.service.js";
+import { getUserFromToken, getUserByApiKey } from "../services/auth.service.js";
 import { validateAccessToken } from "../services/oauth.service.js";
 import { searchProducts, getProduct } from "../services/catalog.service.js";
 import { getOrCreateCart, addToCart, removeFromCart } from "../services/cart.service.js";
@@ -20,18 +20,29 @@ import { createCheckout } from "../services/checkout.service.js";
 import { prisma } from "../db/prisma.js";
 import { z } from "zod";
 
-// ─── Auth helper — accepts OAuth access tokens AND session tokens ─────────────
+// ─── Auth helper — API key (query/header), OAuth token, or session token ──────
 
 async function getUserFromRequest(request: FastifyRequest) {
+  // 1. API key from query string: /mcp?key=us_live_xxx (recommended for Claude)
+  const queryKey = (request.query as Record<string, string>)?.key;
+  if (queryKey?.startsWith("us_live_")) {
+    return getUserByApiKey(queryKey);
+  }
+
+  // 2. API key from header: X-Api-Key: us_live_xxx
+  const headerKey = request.headers["x-api-key"] as string | undefined;
+  if (headerKey?.startsWith("us_live_")) {
+    return getUserByApiKey(headerKey);
+  }
+
+  // 3. Bearer token — OAuth access token or session token
   const auth = request.headers.authorization;
   if (!auth?.startsWith("Bearer ")) return null;
   const token = auth.slice(7);
 
-  // Try OAuth access token first (Claude/agent connections via /oauth/token)
   const oauthResult = await validateAccessToken(token);
   if (oauthResult) return oauthResult.user;
 
-  // Fall back to session token (direct user session)
   return getUserFromToken(token);
 }
 
@@ -41,10 +52,10 @@ function text(data: unknown) {
 
 function authError() {
   return text({
-    error: "OAUTH_TOKEN_EXPIRED_OR_INVALID",
-    message: "Urban Store could not authenticate you. Your OAuth token may have expired.",
-    action: "Please reconnect Urban Store from Claude Settings → Integrations.",
-    reauthorizeUrl: `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/connect`,
+    error: "AUTH_REQUIRED",
+    message: "Urban Store could not authenticate you. Your API key may be missing or invalid.",
+    action: "Visit your Urban Store connect page to get your API key and update your Claude connector URL.",
+    connectUrl: `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/connect`,
   });
 }
 

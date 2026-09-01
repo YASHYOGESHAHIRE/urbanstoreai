@@ -5,8 +5,10 @@ import {
   loginUser,
   logoutSession,
   getUserFromToken,
+  getOrCreateApiKey,
+  regenerateApiKey,
 } from "../services/auth.service.js";
-import { attachUser, COOKIE_NAME } from "../middleware/auth.middleware.js";
+import { attachUser, requireAuth, COOKIE_NAME } from "../middleware/auth.middleware.js";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -119,6 +121,26 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.send({ authenticated: false, user: null });
       }
       return reply.send({ authenticated: true, user: request.user });
+    }
+  );
+
+  // GET /auth/api-key — get or create the user's API key
+  app.get(
+    "/auth/api-key",
+    { preHandler: [attachUser, requireAuth] },
+    async (request, reply) => {
+      const key = await getOrCreateApiKey(request.user!.id);
+      return reply.send({ apiKey: key });
+    }
+  );
+
+  // POST /auth/api-key/regenerate — rotate the API key
+  app.post(
+    "/auth/api-key/regenerate",
+    { preHandler: [attachUser, requireAuth] },
+    async (request, reply) => {
+      const key = await regenerateApiKey(request.user!.id);
+      return reply.send({ apiKey: key });
     }
   );
 

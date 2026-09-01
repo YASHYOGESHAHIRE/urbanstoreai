@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "../db/prisma.js";
 
 // 30-day session lifetime
@@ -97,4 +98,49 @@ export async function getUserFromToken(
   }
 
   return safeUser(session.user);
+}
+
+// ─── API Key ──────────────────────────────────────────────────────────────────
+
+export function generateApiKeyValue(): string {
+  // Format: us_live_<32 hex chars> — recognisable, unguessable
+  return `us_live_${crypto.randomBytes(24).toString("hex")}`;
+}
+
+export async function getOrCreateApiKey(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { apiKey: true },
+  });
+
+  if (user?.apiKey) return user.apiKey;
+
+  // Generate and store a new key
+  const key = generateApiKeyValue();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { apiKey: key },
+  });
+  return key;
+}
+
+export async function regenerateApiKey(userId: string): Promise<string> {
+  const key = generateApiKeyValue();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { apiKey: key },
+  });
+  return key;
+}
+
+export async function getUserByApiKey(
+  apiKey: string
+): Promise<SafeUser | null> {
+  if (!apiKey?.startsWith("us_live_")) return null;
+  const user = await prisma.user.findUnique({
+    where: { apiKey },
+    select: { id: true, name: true, email: true },
+  });
+  if (!user) return null;
+  return safeUser(user);
 }

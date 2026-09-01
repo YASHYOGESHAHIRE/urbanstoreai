@@ -37,7 +37,7 @@ const TokenBodySchema = z.discriminatedUnion("grant_type", [
   z.object({
     grant_type: z.literal("refresh_token"),
     refresh_token: z.string(),
-    client_id: z.string(),
+    client_id: z.string().optional().default(""),
     client_secret: z.string().optional().default(""),
   }),
 ]);
@@ -248,8 +248,8 @@ export async function oauthRoutes(app: FastifyInstance) {
       if (body.data.grant_type === "refresh_token") {
         const tokens = await refreshAccessToken(
           body.data.refresh_token,
-          body.data.client_id,
-          body.data.client_secret
+          body.data.client_id ?? "",
+          body.data.client_secret ?? ""
         );
         return reply.send(tokens);
       }

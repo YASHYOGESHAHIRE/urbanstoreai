@@ -248,23 +248,23 @@ export async function refreshAccessToken(
   clientId: string,
   clientSecret: string
 ) {
-  const client = await getClientById(clientId);
-  if (!client) throw new Error("INVALID_CLIENT");
-
-  // Skip secret check for public clients (CIMD)
-  if (client.clientSecret) {
-    const secretValid = await bcrypt.compare(clientSecret, client.clientSecret);
-    if (!secretValid) throw new Error("INVALID_CLIENT");
-  }
-
+  // Look up grant first — don't require client_id for public CIMD clients
   const grant = await prisma.oAuthGrant.findUnique({
     where: { refreshToken },
-    include: { user: true },
+    include: { user: true, client: true },
   });
 
   if (!grant) throw new Error("INVALID_REFRESH_TOKEN");
   if (grant.revokedAt) throw new Error("TOKEN_REVOKED");
-  if (grant.clientId !== client.id) throw new Error("INVALID_CLIENT");
+
+  // If client_id was provided, validate it matches — skip for public clients
+  if (clientId && grant.client.clientSecret) {
+    if (grant.client.clientId !== clientId) throw new Error("INVALID_CLIENT");
+    if (clientSecret) {
+      const secretValid = await bcrypt.compare(clientSecret, grant.client.clientSecret);
+      if (!secretValid) throw new Error("INVALID_CLIENT");
+    }
+  }
 
   // Rotate: revoke old, issue new
   await prisma.oAuthGrant.update({
@@ -279,7 +279,7 @@ export async function refreshAccessToken(
     data: {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
-      clientId: client.id,
+      clientId: grant.clientId,
       userId: grant.userId,
       scopes: grant.scopes,
       expiresAt: new Date(Date.now() + ACCESS_TOKEN_TTL_MS),

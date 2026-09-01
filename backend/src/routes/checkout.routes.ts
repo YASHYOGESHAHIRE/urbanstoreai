@@ -46,7 +46,10 @@ export async function checkoutRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         const checkout = await getCheckout(id, userId);
-        return reply.send(checkout);
+        return reply.send({
+          ...checkout,
+          razorpayKeyId: process.env.RAZORPAY_KEY_ID ?? "",
+        });
       } catch {
         return reply.code(404).send({ error: "CHECKOUT_NOT_FOUND" });
       }

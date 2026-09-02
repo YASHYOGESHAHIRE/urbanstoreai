@@ -6,12 +6,21 @@ import Link from "next/link";
 import { Heart, ShoppingCart, Check } from "lucide-react";
 import { Product } from "@/lib/products";
 
+export interface ActiveCampaign {
+  id: string;
+  type: string;
+  productId: string | null;
+  title: string;
+  proposedAction: { discountPct?: number; label?: string; bundleWith?: string };
+}
+
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (product: Product) => void;
+  campaign?: ActiveCampaign;
 }
 
-export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export default function ProductCard({ product, onAddToCart, campaign }: ProductCardProps) {
   const [wishlisted, setWishlisted] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -19,6 +28,11 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
     product.mrp > product.price
       ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
       : 0;
+
+  // Campaign may add an extra discount on top
+  const campaignDiscount = campaign?.proposedAction?.discountPct ?? 0;
+  const effectiveDiscount = campaignDiscount > discountPct ? campaignDiscount : discountPct;
+  const campaignLabel = campaign?.proposedAction?.label;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,6 +48,10 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
     setWishlisted(!wishlisted);
   };
 
+  const badgeColor = campaign?.type === "URGENCY" ? "bg-red-500" :
+    campaign?.type === "CLEARANCE" ? "bg-orange-500" :
+    campaign?.type === "BUNDLE" ? "bg-blue-500" : "bg-black";
+
   return (
     <Link href={`/product/${product.id}`}>
       <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all group cursor-pointer">
@@ -47,7 +65,6 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             unoptimized
           />
-          {/* Dark overlay to give images moody look */}
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
 
           {/* Wishlist */}
@@ -62,16 +79,25 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
             />
           </button>
 
-          {/* Discount badge */}
-          {discountPct > 0 && (
-            <span className="absolute top-2.5 left-2.5 bg-black text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-              {discountPct}% OFF
+          {/* Campaign label (takes priority over plain discount badge) */}
+          {campaign && campaignLabel ? (
+            <span className={`absolute top-2.5 left-2.5 ${badgeColor} text-white text-[10px] font-black px-2 py-0.5 rounded-full`}>
+              {campaignLabel}
             </span>
-          )}
-
-          {product.isNew && !discountPct && (
+          ) : effectiveDiscount > 0 ? (
+            <span className="absolute top-2.5 left-2.5 bg-black text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+              {effectiveDiscount}% OFF
+            </span>
+          ) : product.isNew ? (
             <span className="absolute top-2.5 left-2.5 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               NEW
+            </span>
+          ) : null}
+
+          {/* Urgency chip */}
+          {campaign?.type === "URGENCY" && product.availability === "Low stock" && (
+            <span className="absolute bottom-2.5 left-2.5 right-2.5 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full text-center">
+              Almost gone!
             </span>
           )}
         </div>
@@ -97,12 +123,10 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
             )}
           </div>
 
-          {/* Attributes */}
           <p className="text-[11px] text-gray-400 mb-2 leading-tight line-clamp-1">
             {product.attributes.join(" · ")}
           </p>
 
-          {/* Availability + Cart */}
           <div className="flex items-center justify-between">
             <span
               className={`text-[11px] font-semibold ${

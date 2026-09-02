@@ -1,6 +1,7 @@
 "use client";
 
 import { Shirt, Footprints, ShoppingBag, Watch, Leaf, LayoutGrid } from "lucide-react";
+import { track } from "@/lib/behaviour";
 
 const categories = [
   { label: "All", icon: LayoutGrid },
@@ -17,6 +18,13 @@ interface CategoryNavProps {
 }
 
 export default function CategoryNav({ active, onChange }: CategoryNavProps) {
+  const handleChange = (cat: string) => {
+    onChange(cat);
+    if (cat !== "All") {
+      track({ event: "category_browsed", categoryId: cat.toLowerCase() });
+    }
+  };
+
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-[1400px] mx-auto px-6">
@@ -26,7 +34,7 @@ export default function CategoryNav({ active, onChange }: CategoryNavProps) {
             return (
               <button
                 key={label}
-                onClick={() => onChange(label)}
+                onClick={() => handleChange(label)}
                 className={`flex flex-col items-center gap-1.5 px-5 py-3.5 min-w-[80px] transition-all border-b-2 ${
                   isActive
                     ? "border-black bg-black text-white rounded-t-none"

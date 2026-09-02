@@ -31,10 +31,11 @@ interface CheckoutData {
   cart?: {
     items: {
       id: string;
-      productName?: string;
       variantSku: string;
       quantity: number;
       priceSnapshot: number;
+      product?: { name: string; brand: string };
+      variant?: { attributes: Record<string, string> };
     }[];
   };
 }
@@ -221,9 +222,11 @@ export default function PayPage() {
             <div key={item.id} className="flex items-center justify-between mb-2">
               <div className="flex-1 min-w-0">
                 <p className="text-gray-900 text-[13px] font-medium truncate">
-                  {item.productName ?? item.variantSku}
+                  {item.product?.name ?? item.variantSku}
                 </p>
-                <p className="text-gray-400 text-[12px]">× {item.quantity}</p>
+                <p className="text-gray-400 text-[12px]">
+                  {item.variant?.attributes ? Object.values(item.variant.attributes).join(" · ") : ""} × {item.quantity}
+                </p>
               </div>
               <span className="text-gray-900 text-[13px] font-bold ml-3 flex-shrink-0">
                 {fmt(item.priceSnapshot * item.quantity)}

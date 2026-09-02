@@ -112,7 +112,8 @@ export async function confirmCheckout(
   userId: string,
   razorpayPaymentId: string,
   razorpaySignature: string,
-  agentGrantId?: string
+  agentGrantId?: string,
+  skipSignatureVerification = false   // true when called from server-side webhook
 ) {
   const checkout = await prisma.checkout.findUnique({
     where: { id: checkoutId },
@@ -138,15 +139,18 @@ export async function confirmCheckout(
 
   if (!checkout.razorpayOrderId) throw new Error("NO_RAZORPAY_ORDER");
 
-  // Verify Razorpay signature
-  const expectedSig = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET ?? "")
-    .update(`${checkout.razorpayOrderId}|${razorpayPaymentId}`)
-    .digest("hex");
+  // Verify Razorpay signature (skipped when called from server-side webhook,
+  // which has already verified its own HMAC)
+  if (!skipSignatureVerification) {
+    const expectedSig = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET ?? "")
+      .update(`${checkout.razorpayOrderId}|${razorpayPaymentId}`)
+      .digest("hex");
 
-  if (expectedSig !== razorpaySignature) {
-    await auditLog({ userId, agentGrantId, action: "checkout.signature_mismatch", payload: { checkoutId } });
-    throw new Error("INVALID_SIGNATURE");
+    if (expectedSig !== razorpaySignature) {
+      await auditLog({ userId, agentGrantId, action: "checkout.signature_mismatch", payload: { checkoutId } });
+      throw new Error("INVALID_SIGNATURE");
+    }
   }
 
   const itemsSnapshot = checkout.cart.items.map((i) => ({

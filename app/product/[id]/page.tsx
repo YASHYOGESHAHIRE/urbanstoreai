@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -8,6 +8,7 @@ import {
   Shield, RotateCcw, Truck, ChevronRight,
 } from "lucide-react";
 import { products, Product } from "@/lib/products";
+import { track } from "@/lib/behaviour";
 
 function formatPrice(price: number) {
   return `₹${price.toLocaleString("en-IN")}`;
@@ -29,6 +30,18 @@ export default function ProductPage({
   const [wishlisted, setWishlisted] = useState(false);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+
+  // Fire product_page_viewed once on mount
+  useEffect(() => {
+    if (!product) return;
+    track({
+      event: "product_page_viewed",
+      productId: product.id,
+      categoryId: product.category.toLowerCase(),
+      metadata: { name: product.name, brand: product.brand },
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   if (!product) {
     return (

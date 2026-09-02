@@ -9,6 +9,7 @@ import {
   TrendingUp, ChevronDown, ChevronRight, Receipt,
 } from "lucide-react";import { saveAuditEntries, appendAuditEntry, newAuditSession, AuditEntry } from "@/lib/auditStore";
 import { authHeaders } from "@/lib/auth";
+import { track } from "@/lib/behaviour";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
@@ -601,8 +602,19 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
   const [hasStarted, setHasStarted] = useState(false);
   const [addingProduct, setAddingProduct] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showFailureMenu, setShowFailureMenu] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // ─── Failure scenarios for demo ──────────────────────────────────────────
+  const FAILURE_SCENARIOS = [
+    { label: "Out of stock item", query: "Add a Canvas Comfort Sneaker size 6 to my cart" },
+    { label: "Budget exceeded", query: "Find watches above ₹50,000" },
+    { label: "Checkout without cart", query: "Proceed to checkout" },
+    { label: "Vague query (clarification)", query: "shoes" },
+    { label: "Unknown product", query: "I want to buy an iPhone 15 Pro" },
+    { label: "Cancel non-cancellable", query: "Cancel my delivered order" },
+  ];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -633,6 +645,18 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
       // Save backend audit entries to localStorage
       if (data.audit?.length) {
         saveAuditEntries(data.audit as AuditEntry[]);
+      }
+
+      // Track search query for behaviour personalisation
+      if (data.explain?.search?.query && data.explain.search.resultsFound > 0) {
+        track({
+          event: "search_query",
+          query: data.explain.search.query,
+          metadata: {
+            resultsFound: data.explain.search.resultsFound,
+            category: data.explain.understood?.category,
+          },
+        });
       }
 
       setMessages((prev) => [...prev, {
@@ -894,12 +918,39 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
             className="px-3 py-1 border border-[#333] rounded-full text-[12px] text-[#888] hover:border-[#555] hover:text-white transition-colors">
             New Chat
           </button>
+          <button
+            onClick={() => setShowFailureMenu((v) => !v)}
+            title="Test failure scenarios"
+            className="px-2 py-1 border border-[#333] rounded-full text-[11px] text-red-500 hover:border-red-500 hover:bg-red-500/10 transition-colors font-bold"
+          >
+            ⚡ Fail
+          </button>
           <button onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#1a1a1a] transition-colors">
             <X size={16} className="text-[#555]" />
           </button>
         </div>
       </div>
+
+      {/* ── Failure mode dropdown ── */}
+      {showFailureMenu && (
+        <div className="border-b border-[#1e1e1e] bg-[#0d0d0d] px-4 py-3">
+          <p className="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-2">⚡ Failure Mode — Test Scenarios</p>
+          <div className="space-y-1.5">
+            {FAILURE_SCENARIOS.map((s) => (
+              <button
+                key={s.label}
+                onClick={() => { setShowFailureMenu(false); sendMessage(s.query); }}
+                className="w-full text-left px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[12px] text-[#aaa] hover:border-red-500/40 hover:text-white transition-all"
+              >
+                <span className="text-red-500 font-bold mr-1.5">→</span>
+                <span className="text-[#888] mr-1.5">{s.label}:</span>
+                <span className="italic">&ldquo;{s.query}&rdquo;</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Body ── */}
       <div className="flex-1 overflow-y-auto px-5 py-4">

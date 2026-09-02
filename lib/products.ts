@@ -138,3 +138,41 @@ const catalogRaw: unknown[] = require("../backend/urban_store_catalog.json") as 
 export const products: Product[] = (catalogRaw as any[]).map(fromCatalog);
 
 export const chatProducts = products.filter((p) => p.category === "Bags").slice(0, 3);
+
+// ─── Convert backend API product to frontend Product type ────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function fromApiProduct(p: any): Product {
+  const variants: ProductVariant[] = (p.variants ?? []).map((v: any) => ({
+    sku: v.sku,
+    attributes: v.attributes ?? {},
+    price: v.price ?? p.price,
+    mrp: v.mrp ?? p.mrp,
+    availability: v.availability as "in_stock" | "out_of_stock" | "low_stock",
+    quantity: v.quantity ?? 0,
+  }));
+
+  return {
+    id: p.id,
+    brand: p.brand ?? "",
+    name: p.name,
+    description: p.description ?? "",
+    category: mapCategory(p.category?.toLowerCase() ?? p.categoryId ?? "lifestyle"),
+    subcategory: p.subcategory ?? p.subcategoryName ?? "",
+    image: p.image?.startsWith("http") ? p.image : getImage(p.subcategoryId ?? ""),
+    price: p.price ?? 0,
+    mrp: p.mrp ?? p.price ?? 0,
+    attributes: variants[0]
+      ? Object.values(variants[0].attributes).map(String)
+      : [],
+    availability: p.availability === "in_stock" ? "In stock"
+      : p.availability === "low_stock" ? "Low stock"
+      : "Out of stock",
+    variants,
+    useCases: p.useCases ?? [],
+    suitableFor: p.suitableFor ?? [],
+    notSuitableFor: p.notSuitableFor ?? [],
+    characteristics: p.characteristics ?? {},
+    maxQtyPerOrder: p.maxQtyPerOrder ?? 5,
+    isNew: false,
+  };
+}

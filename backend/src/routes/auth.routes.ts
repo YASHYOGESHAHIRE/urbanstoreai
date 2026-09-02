@@ -9,6 +9,7 @@ import {
   regenerateApiKey,
 } from "../services/auth.service.js";
 import { attachUser, requireAuth, COOKIE_NAME } from "../middleware/auth.middleware.js";
+import { getUserAuditLogs } from "../services/audit.service.js";
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -104,8 +105,18 @@ export async function authRoutes(app: FastifyInstance) {
     { preHandler: [attachUser] },
     async (request, reply) => {
       const token = request.cookies?.[COOKIE_NAME];
+      const userId = request.user?.id;
       if (token) {
         await logoutSession(token);
+      }
+      // Clear the agent session so stale conversation history doesn't leak
+      // The agent routes module owns the sessions Map — clear via the DELETE endpoint
+      if (userId) {
+        const defaultSessionId = `${userId}-default`;
+        await fetch(
+          `http://localhost:${process.env.PORT ?? 4000}/api/v1/agent/session/${defaultSessionId}`,
+          { method: "DELETE", headers: { Authorization: `Bearer ${token ?? ""}` } }
+        ).catch(() => { /* best-effort */ });
       }
       reply.clearCookie(COOKIE_NAME, { path: "/" });
       return reply.send({ success: true });
@@ -141,6 +152,16 @@ export async function authRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const key = await regenerateApiKey(request.user!.id);
       return reply.send({ apiKey: key });
+    }
+  );
+
+  // GET /auth/audit-logs — get persistent audit trail for current user
+  app.get(
+    "/auth/audit-logs",
+    { preHandler: [attachUser, requireAuth] },
+    async (request, reply) => {
+      const logs = await getUserAuditLogs(request.user!.id);
+      return reply.send({ logs });
     }
   );
 

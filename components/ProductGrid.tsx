@@ -1,14 +1,15 @@
 "use client";
 
 import { Product } from "@/lib/products";
-import ProductCard from "./ProductCard";
+import ProductCard, { ActiveCampaign } from "./ProductCard";
 
 interface ProductGridProps {
   products: Product[];
   onAddToCart?: (product: Product) => void;
+  campaigns?: ActiveCampaign[];
 }
 
-export default function ProductGrid({ products, onAddToCart }: ProductGridProps) {
+export default function ProductGrid({ products, onAddToCart, campaigns = [] }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className="py-20 text-center">
@@ -19,9 +20,17 @@ export default function ProductGrid({ products, onAddToCart }: ProductGridProps)
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
-      ))}
+      {products.map((product) => {
+        const campaign = campaigns.find((c) => c.productId === product.id);
+        return (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onAddToCart={onAddToCart}
+            campaign={campaign}
+          />
+        );
+      })}
     </div>
   );
 }

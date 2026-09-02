@@ -7,6 +7,32 @@ import { runAgentTurn, ChatMessage, ReasoningStep, AuditEntry, ExplainBlock } fr
 // In-memory session store (replace with Redis for production)
 const sessions = new Map<string, ChatMessage[]>();
 
+// ─── Per-user rate limit — 20 agent calls per minute ─────────────────────────
+const userCallCounts = new Map<string, { count: number; windowStart: number }>();
+const AGENT_RATE_LIMIT = 20;
+const AGENT_RATE_WINDOW = 60_000; // 1 minute
+
+function checkUserRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = userCallCounts.get(userId);
+  if (!entry || now - entry.windowStart > AGENT_RATE_WINDOW) {
+    userCallCounts.set(userId, { count: 1, windowStart: now });
+    return true; // allowed
+  }
+  if (entry.count >= AGENT_RATE_LIMIT) return false; // blocked
+  entry.count++;
+  return true;
+}
+
+// ─── Message sanitiser — strip non-printable and control characters ───────────
+function sanitiseMessage(raw: string): string {
+  return raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "") // control chars
+    .replace(/\uFEFF/g, "")   // BOM
+    .trim()
+    .slice(0, 2000);
+}
+
 // ─── Server-side checkout confirmation gate ───────────────────────────────────
 // Tracks which sessions have explicitly said YES to a pending checkout.
 // This is a code-level guard — the LLM cannot bypass it regardless of prompt.
@@ -57,24 +83,38 @@ export async function agentRoutes(app: FastifyInstance) {
 
       const sessionId = body.data.sessionId ?? `${userId}-default`;
       const history = sessions.get(sessionId) ?? [];
-      const userMessage = body.data.message;
+      const userMessage = sanitiseMessage(body.data.message);
+
+      // ── Per-user rate limit ───────────────────────────────────────────────
+      if (!checkUserRateLimit(userId)) {
+        return reply.code(429).send({ error: "RATE_LIMIT_EXCEEDED", message: "Too many requests. Please wait a moment." });
+      }
 
       // ── Server-side YES gate ──────────────────────────────────────────────
-      // If the last agent message contained a checkout confirmation request
-      // AND this message is a YES → mark confirmed so the agent can proceed.
-      // The agent tool executor checks this before allowing create_checkout.
+      // Check both the in-memory map AND the conversation history for YES
+      // This makes the gate survive Vercel cold starts
       if (YES_PATTERNS.test(userMessage)) {
         const lastMessages = history.slice(-4);
         const agentAskedForConfirm = lastMessages.some(
           (m) => m.role === "assistant" &&
             (m.content.toLowerCase().includes("confirm") ||
              m.content.toLowerCase().includes("reply yes") ||
-             m.content.toLowerCase().includes("type yes"))
+             m.content.toLowerCase().includes("type yes") ||
+             m.content.toLowerCase().includes("₹") && m.content.toLowerCase().includes("proceed"))
         );
         if (agentAskedForConfirm) {
           markCheckoutConfirmed(sessionId, 0);
         }
       }
+
+      // Also check history directly — if last assistant message asked for confirm
+      // and current message is YES, allow checkout even if Map was reset
+      const isYesAfterConfirmRequest = YES_PATTERNS.test(userMessage) &&
+        history.slice(-4).some((m) =>
+          m.role === "assistant" &&
+          (m.content.toLowerCase().includes("reply yes") ||
+           m.content.toLowerCase().includes("confirm") && m.content.includes("₹"))
+        );
 
       try {
         const { reply: agentReply, updatedHistory, products, audit, explain } = await runAgentTurn(
@@ -83,7 +123,8 @@ export async function agentRoutes(app: FastifyInstance) {
           history,
           request.agent?.grantId,
           sessionId,
-          (sid) => sessionHasConfirmed(sid),
+          // Gate: confirmed if Map has entry OR history-based YES detection
+          (sid) => sessionHasConfirmed(sid) || isYesAfterConfirmRequest,
           (sid) => clearCheckoutConfirmation(sid)
         );
 

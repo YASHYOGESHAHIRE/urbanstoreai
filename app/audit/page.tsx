@@ -295,19 +295,46 @@ export default function AuditPage() {
   const [allSessions, setAllSessions] = useState<AuditSession[]>([]);
   const [session, setSession] = useState<AuditSession | null>(null);
   const [filter, setFilter] = useState("ALL");
+  const [dbLoaded, setDbLoaded] = useState(false);
 
-  const refresh = () => {
+  const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
+
+  const refresh = async () => {
+    // Always load localStorage sessions
     const sessions = loadAllSessions();
     setAllSessions(sessions);
-    // Default to most recent session
     setSession((prev) => {
       if (prev) {
-        // Keep showing same session but with updated entries
         const updated = sessions.find((s) => s.sessionId === prev.sessionId);
         return updated ?? sessions[sessions.length - 1] ?? null;
       }
       return sessions[sessions.length - 1] ?? null;
     });
+
+    // Also try to fetch persistent DB logs and merge into current session
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("urban_token") : null;
+      if (!token) return;
+      const res = await fetch(`${BACKEND}/auth/audit-logs`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const dbLogs: AuditEntry[] = data.logs ?? [];
+      if (dbLogs.length === 0) return;
+
+      // Merge DB logs into a synthetic "DB" session
+      setDbLoaded(true);
+      const dbSession: AuditSession = {
+        sessionId: "db_persistent",
+        startedAt: dbLogs[0]?.timestamp ?? new Date().toISOString(),
+        entries: dbLogs,
+      };
+      setAllSessions((prev) => {
+        const filtered = prev.filter((s) => s.sessionId !== "db_persistent");
+        return [...filtered, dbSession];
+      });
+    } catch { /* DB fetch is optional */ }
   };
 
   useEffect(() => {
@@ -319,12 +346,14 @@ export default function AuditPage() {
       window.removeEventListener("urban_audit_update", handler);
       window.removeEventListener("urban_audit_sessions_update", handler);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const entries = session?.entries ?? [];
   const eventTypes = ["ALL", ...Array.from(new Set(entries.map((e) => e.event)))];
   const filtered = filter === "ALL" ? entries : entries.filter((e) => e.event === filter);
   const errors = entries.filter((e) => e.event === "ERROR").length;
+  const isDbSession = session?.sessionId === "db_persistent";
 
   return (
     <div className="min-h-screen bg-[#f5f5f3]">
@@ -342,6 +371,16 @@ export default function AuditPage() {
             <p className="text-gray-900 text-[14px] font-bold">Audit Trail</p>
             {entries.length > 0 && (
               <span className="text-gray-400 text-[12px]">· {entries.length} events</span>
+            )}
+            {isDbSession && (
+              <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full text-blue-600 text-[10px] font-bold">
+                DB
+              </span>
+            )}
+            {dbLoaded && !isDbSession && (
+              <span className="px-2 py-0.5 bg-gray-50 border border-gray-200 rounded-full text-gray-400 text-[10px] font-medium">
+                + DB
+              </span>
             )}
             {errors > 0 && (
               <span className="px-2 py-0.5 bg-red-50 border border-red-100 rounded-full text-red-500 text-[10px] font-bold">
@@ -371,13 +410,14 @@ export default function AuditPage() {
           <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
             {[...allSessions].reverse().map((s, i) => {
               const isActive = s.sessionId === session?.sessionId;
-              const label = i === 0 ? "Latest" : `Session ${allSessions.length - i}`;
+              const isDB = s.sessionId === "db_persistent";
+              const label = isDB ? "📦 All Time (DB)" : i === 0 ? "Latest" : `Session ${allSessions.length - i}`;
               const time = new Date(s.startedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
               return (
                 <button key={s.sessionId} onClick={() => { setSession(s); setFilter("ALL"); }}
                   className={`px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
                     isActive
-                      ? "bg-black text-white"
+                      ? isDB ? "bg-blue-600 text-white" : "bg-black text-white"
                       : "bg-white border border-gray-200 text-gray-500 hover:text-black hover:border-gray-900"
                   }`}>
                   {label} · {time} · {s.entries.length} events
@@ -392,9 +432,13 @@ export default function AuditPage() {
             <div className="w-16 h-16 bg-white border border-gray-100 rounded-2xl flex items-center justify-center shadow-sm">
               <Receipt size={24} className="text-gray-300" />
             </div>
-            <p className="text-gray-900 text-[16px] font-bold">No audit entries yet</p>
+            <p className="text-gray-900 text-[16px] font-bold">
+              {isDbSession ? "No persistent logs yet" : "No audit entries yet"}
+            </p>
             <p className="text-gray-400 text-[13px] max-w-[300px] leading-relaxed">
-              Start a conversation with Urban AI and every action will be logged here in real time.
+              {isDbSession
+                ? "Server-side audit logs appear here once you place an order or cancel one."
+                : "Start a conversation with Urban AI and every action will be logged here in real time."}
             </p>
             <Link href="/"
               className="mt-2 px-5 py-2.5 bg-black text-white text-[13px] font-bold rounded-xl hover:bg-gray-900 transition-colors">

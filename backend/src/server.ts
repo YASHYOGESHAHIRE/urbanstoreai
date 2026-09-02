@@ -13,7 +13,9 @@ import { openApiRoutes } from "./routes/openapi.routes.js";
 import { adminRoutes } from "./routes/admin.routes.js";
 import { behaviourRoutes } from "./routes/behaviour.routes.js";
 import { mcpRoutes } from "./routes/mcp.routes.js";
+import { webhookRoutes } from "./routes/webhook.routes.js";
 import { prisma } from "./db/prisma.js";
+import { expireOverdueCampaigns } from "./services/campaign.service.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -126,14 +128,28 @@ async function bootstrap() {
   await app.register(behaviourRoutes);
   await app.register(mcpRoutes);
 
+  // ── Webhooks (raw body needed for HMAC verification) ──────────────────────
+  await app.register(webhookRoutes);
+
   // ── Health ────────────────────────────────────────────────────────────────────
   app.get("/health", async (_req, reply) => {
-    return reply.send({ status: "ok", timestamp: new Date().toISOString() });
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return reply.send({ status: "ok", db: "ok", timestamp: new Date().toISOString() });
+    } catch {
+      return reply.code(503).send({ status: "degraded", db: "error", timestamp: new Date().toISOString() });
+    }
   });
 
   const host = process.env.HOST ?? "0.0.0.0";
   const port = parseInt(process.env.PORT ?? "4000", 10);
   await app.listen({ host, port });
+
+  // ── Startup tasks ─────────────────────────────────────────────────────────
+  // Expire any campaigns that lapsed while the server was down
+  expireOverdueCampaigns().catch((err) =>
+    console.error("[startup] campaign expiry failed:", err)
+  );
 
   console.log(`\n Urban Store Backend  http://localhost:${port}`);
   console.log(`\n AUTH`);

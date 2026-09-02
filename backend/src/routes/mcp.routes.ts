@@ -14,7 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { getUserFromToken, getUserByApiKey } from "../services/auth.service.js";
 import { validateAccessToken } from "../services/oauth.service.js";
-import { searchProducts, getProduct } from "../services/catalog.service.js";
+import { searchProducts, getProduct, getUpsells, getUpgrades } from "../services/catalog.service.js";
 import { getOrCreateCart, addToCart, removeFromCart } from "../services/cart.service.js";
 import { createCheckout } from "../services/checkout.service.js";
 import { prisma } from "../db/prisma.js";
@@ -199,12 +199,12 @@ Returns the updated cart after removal.`,
   // ── create_checkout ─────────────────────────────────────────────────────────
   server.tool(
     "create_checkout",
-    `Initiate checkout for the user's current cart. This is the "preview/dry-run" step — it validates stock and pricing and creates a Razorpay order, but does NOT charge the user.
+    `Initiate checkout for the user's current cart. Validates stock and pricing, creates a Razorpay order, but does NOT charge the user yet — payment happens on the linked page.
 ALWAYS call get_cart first and show the user the full cart contents and total.
-ALWAYS get explicit YES confirmation from the user before calling this.
-After calling this, you MUST immediately show the user the paymentUrl from the response as a clickable link with the message: "Click here to complete your payment: [paymentUrl]". Never ask the user to request the link — always show it automatically.
+ALWAYS get explicit YES confirmation from the user before calling this tool.
+After calling this, you MUST immediately show the user the paymentUrl from the response as a clickable link: "Click here to complete your payment: [paymentUrl]". Never wait to be asked — always show the link automatically.
 Returns: checkoutId, subtotal, razorpayOrderId, paymentUrl, policyWarnings[].
-Error codes: EMPTY_CART, POLICY_REJECTED, CONFIRMATION_REQUIRED.`,
+Error codes: EMPTY_CART (cart is empty), POLICY_REJECTED (order blocked by store policy — show the policy summary to the user).`,
     {},
     async () => {
       const user = await getUserFromRequest(request);
@@ -244,6 +244,35 @@ Useful for: checking order status, reordering previous items, finding order IDs 
         id: o.id, status: o.status, total: o.total,
         currency: "INR", items: o.itemsJson, createdAt: o.createdAt,
       })));
+    }
+  );
+
+  // ── get_upsell ──────────────────────────────────────────────────────────────
+  server.tool(
+    "get_upsell",
+    `Get complementary and frequently-bought-together products for a given product.
+Call this automatically after every successful add_to_cart — do not wait to be asked.
+Returns upsells[] (up to 2 products) and a message to use as your intro line.
+Each product has the same shape as search_catalog results (id, name, price, variants, etc.).
+If upsells is empty, skip silently.`,
+    { productId: z.string().describe("ID of the product just added to cart") },
+    async ({ productId }) => {
+      const result = await getUpsells(productId);
+      return text(result);
+    }
+  );
+
+  // ── get_upgrade ─────────────────────────────────────────────────────────────
+  server.tool(
+    "get_upgrade",
+    `Get a premium upgrade option for a product.
+Call when the user asks for "better version", "premium", "upgrade", or "best option".
+Returns upgrades[] with the next-tier product(s) and a currentPrice for comparison.
+If no upgrade exists, the message field says so — relay it to the user.`,
+    { productId: z.string().describe("ID of the product to find an upgrade for") },
+    async ({ productId }) => {
+      const result = await getUpgrades(productId);
+      return text(result);
     }
   );
 

@@ -99,25 +99,4 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.send({ campaigns });
     }
   );
-
-  // ── POST /api/v1/admin/make-admin (dev helper) ───────────────────────────
-  // Grants admin to a user by email — only works in development
-  app.post(
-    "/api/v1/admin/make-admin",
-    async (request, reply) => {
-      if (process.env.NODE_ENV !== "development") {
-        return reply.code(403).send({ error: "ONLY_IN_DEV" });
-      }
-      const body = z.object({ email: z.string().email() }).safeParse(request.body);
-      if (!body.success) return reply.code(400).send({ error: "VALIDATION_ERROR" });
-
-      const { prisma } = app;
-      const user = await prisma.user.update({
-        where: { email: body.data.email },
-        data: { isAdmin: true },
-        select: { id: true, name: true, email: true, isAdmin: true },
-      });
-      return reply.send({ user });
-    }
-  );
 }

@@ -1,15 +1,47 @@
 import Groq from "groq-sdk";
-import { searchProducts, getProduct, getProductAvailability } from "./catalog.service.js";
+import { searchProducts, getProduct, getProductAvailability, getUpsells, getUpgrades } from "./catalog.service.js";
 import { getOrCreateCart, addToCart, updateCartItem, removeFromCart } from "./cart.service.js";
 import { createCheckout } from "./checkout.service.js";
 import { getUserOrders, cancelOrder } from "./order.service.js";
 import { auditLog } from "./audit.service.js";
+import { getTrendingSearches } from "./behaviour.service.js";
 import { prisma } from "../db/prisma.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ProductCard = Record<string, any>;
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "" });
+
+// ─── Groq call with retry + fallback model ────────────────────────────────────
+
+const GROQ_PRIMARY = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+const GROQ_FALLBACK = "llama-3.1-8b-instant"; // fast, cheap fallback
+
+async function groqCreate(
+  params: Parameters<typeof groq.chat.completions.create>[0] & { stream?: false },
+  retries = 3
+): Promise<Groq.Chat.ChatCompletion> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const model = attempt < retries ? GROQ_PRIMARY : GROQ_FALLBACK;
+    try {
+      return await groq.chat.completions.create({ ...params, model, stream: false }) as Groq.Chat.ChatCompletion;
+    } catch (err: unknown) {
+      const isRetryable =
+        err instanceof Error &&
+        (err.message.includes("rate_limit") ||
+          err.message.includes("529") ||
+          err.message.includes("503") ||
+          err.message.includes("timeout"));
+
+      if (!isRetryable || attempt === retries) throw err;
+
+      // Exponential backoff: 500ms, 1s, 2s
+      const delay = 500 * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw new Error("Groq unreachable");
+}
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -173,6 +205,34 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_upsell",
+      description: "Get complementary or frequently-bought-together products for a given product. Call this automatically after every successful add_to_cart — do not wait to be asked. Returns products that pair well with what the user just added. Use the message field as your intro line.",
+      parameters: {
+        type: "object",
+        properties: {
+          productId: { type: "string", description: "ID of the product just added to cart" },
+        },
+        required: ["productId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_upgrade",
+      description: "Get a premium upgrade option for a product. Call when user asks for 'better version', 'premium', 'upgrade', or 'best option'. Returns the next-tier product with a price comparison. If no upgrade exists, the message says so — relay that to the user.",
+      parameters: {
+        type: "object",
+        properties: {
+          productId: { type: "string", description: "ID of the product to find an upgrade for" },
+        },
+        required: ["productId"],
+      },
+    },
+  },
 ];
 
 // ─── System prompt ────────────────────────────────────────────────────────────
@@ -204,11 +264,19 @@ For order history → call get_orders.
 
 STEP 2 — ADD TO CART:
 When user picks a product → call add_to_cart immediately.
+After a successful add_to_cart → ALWAYS call get_upsell with the same productId immediately in the same turn.
+If get_upsell returns upsells → show them using the message field as your intro. Keep it to 1 line: the message from the tool.
+If get_upsell returns empty upsells → skip silently.
 Show cart summary. Say: "Ready to checkout?"
 
 If add_to_cart returns OUT_OF_STOCK:
 Say: "Sorry, that's out of stock. Let me find alternatives..."
 Call search_products with similar keywords.
+
+STEP 2b — UPGRADE:
+When user asks "better version", "upgrade", "premium", "best option" → call get_upgrade with the productId of the current product.
+If upgrade exists → show it with the price difference. Ask "Want to swap to this instead?"
+If no upgrade → relay the message from the tool ("already the top option").
 
 STEP 3 — CHECKOUT (GATED):
 When user says "checkout", "buy", "pay", "proceed":
@@ -225,7 +293,7 @@ OTHER RULES:
 - NEVER use bullet points with - or *. Use plain sentences.
 - Never show SKUs or internal IDs
 - For out of stock → suggest alternatives immediately
-- When user asks "better version", "upgrade", "premium" → call search_products with similar query and higher price range
+- When user asks "better version", "upgrade", "premium" → call get_upgrade with the productId.
 - When user says "specs", "details", "tell me more" after seeing products → call get_product for ALL products shown, then summarise in plain text. Do not ask which one.
 - For items outside our categories (groceries, electronics, etc.) → say "Urban Store specialises in fashion, accessories, and bags. We don't carry [item]." Do NOT suggest alternatives you haven't searched for.`;
 
@@ -473,6 +541,16 @@ async function executeTool(
         }
       }
 
+      case "get_upsell": {
+        const result = await getUpsells(args.productId as string);
+        return JSON.stringify(result);
+      }
+
+      case "get_upgrade": {
+        const result = await getUpgrades(args.productId as string);
+        return JSON.stringify(result);
+      }
+
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` });
     }
@@ -620,26 +698,36 @@ export async function runAgentTurn(
     payload: { message: userMessage.slice(0, 200) },
   });
 
-  // Inject order history context on first turn (no history yet)
+  // Inject order history + trending context on first turn (no history yet)
   let orderContext = "";
   if (history.length === 0) {
     try {
-      const orders = await getUserOrders(userId);
+      const [orders, trending] = await Promise.all([
+        getUserOrders(userId),
+        getTrendingSearches(7, 5),
+      ]);
       if (orders.length > 0) {
         const last = orders[0];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const itemNames = (last.items as any[]).map((i) => i.productName).join(", ");
-        orderContext = `\n\nUSER ORDER HISTORY CONTEXT (do not reveal unless asked):
+        orderContext += `\n\nUSER ORDER HISTORY CONTEXT (do not reveal unless asked):
 Last order: ${itemNames} — ₹${last.total} — Status: ${last.status} — Order ID: ${last.id}
 Total orders placed: ${orders.length}`;
       }
-    } catch { /* ignore — order history is optional context */ }
+      if (trending.length > 0) {
+        const trendList = trending
+          .filter((t) => t.query)
+          .map((t) => `"${t.query}" (${t.count}x)`)
+          .join(", ");
+        orderContext += `\n\nSTORE TRENDING SEARCHES THIS WEEK (use to personalise, do not reveal directly): ${trendList}`;
+      }
+    } catch { /* ignore — context is optional */ }
   }
 
   // Tool-call loop — max 5 iterations to prevent infinite loops
   for (let i = 0; i < 5; i++) {
-    const response = await groq.chat.completions.create({
-      model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+    const response = await groqCreate({
+      model: GROQ_PRIMARY,
       messages: [
         { role: "system", content: SYSTEM_PROMPT + orderContext },
         ...(messages as Groq.Chat.ChatCompletionMessageParam[]),
@@ -758,8 +846,8 @@ export async function runAgentTurnWithReasoning(
     iteration = i + 1;
     const t0 = Date.now();
 
-    const response = await groq.chat.completions.create({
-      model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+    const response = await groqCreate({
+      model: GROQ_PRIMARY,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         ...(messages as Groq.Chat.ChatCompletionMessageParam[]),

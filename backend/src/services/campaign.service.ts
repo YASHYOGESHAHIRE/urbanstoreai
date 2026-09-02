@@ -57,16 +57,8 @@ OUTPUT: Return ONLY valid JSON, no markdown, no explanation outside the JSON.
         "Similar discount in Bags category historically drives 3-4x volume increase"
       ],
       "projections": {
-        "withoutCampaign": {
-          "unitsSold": 2,
-          "revenue": 5998,
-          "timeframe": "7 days"
-        },
-        "withCampaign": {
-          "unitsSold": 8,
-          "revenue": 20392,
-          "timeframe": "7 days"
-        },
+        "withoutCampaign": { "unitsSold": 2, "revenue": 5998, "timeframe": "7 days" },
+        "withCampaign":    { "unitsSold": 8, "revenue": 20392, "timeframe": "7 days" },
         "netGain": 14394,
         "marginImpact": "-₹450 per unit (15% reduction)",
         "confidence": "medium"
@@ -84,7 +76,6 @@ OUTPUT: Return ONLY valid JSON, no markdown, no explanation outside the JSON.
 // ─── Generate campaign decisions ──────────────────────────────────────────────
 
 export async function generateCampaignDecisions(): Promise<void> {
-  // 1. Gather real store data
   const [slowMoving, velocity, cartStats, stockHealth, revenue] = await Promise.all([
     getSlowMovingProducts(30),
     getProductVelocity(30),
@@ -93,7 +84,6 @@ export async function generateCampaignDecisions(): Promise<void> {
     getRevenueStats(30),
   ]);
 
-  // 2. Build data context for Groq
   const storeData = {
     period: "Last 30 days",
     revenue: {
@@ -130,7 +120,6 @@ export async function generateCampaignDecisions(): Promise<void> {
     }),
   };
 
-  // 3. Call Groq
   const response = await groq.chat.completions.create({
     model: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
     messages: [
@@ -146,17 +135,14 @@ export async function generateCampaignDecisions(): Promise<void> {
 
   const raw = response.choices[0].message.content ?? "{}";
 
-  // 4. Parse Groq response
   let parsed: { campaigns: CampaignInput[] };
   try {
-    // Strip any markdown code fences if present
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     parsed = JSON.parse(cleaned);
   } catch {
     throw new Error(`Failed to parse marketing agent response: ${raw.slice(0, 200)}`);
   }
 
-  // 5. Save to DB
   const campaigns = parsed.campaigns ?? [];
   for (const c of campaigns) {
     await prisma.campaign.create({
@@ -202,28 +188,140 @@ export async function getCampaigns(status?: string) {
 // ─── Approve campaign ─────────────────────────────────────────────────────────
 
 export async function approveCampaign(id: string) {
+  const campaign = await prisma.campaign.findUniqueOrThrow({ where: { id } });
+
+  // Execute the campaign action and capture original prices for later revert
+  const originalPrices = await executeCampaignAction(campaign);
+
+  // Store original prices in proposedAction so dismissCampaign/expiry can revert
+  const updatedAction = {
+    ...(campaign.proposedAction as Record<string, unknown>),
+    ...(originalPrices ? { _originalPrices: originalPrices } : {}),
+  };
+
   return prisma.campaign.update({
     where: { id },
     data: {
       status: "active",
       approvedAt: new Date(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      proposedAction: updatedAction,
     },
   });
 }
 
-// ─── Dismiss campaign ─────────────────────────────────────────────────────────
+// ─── Execute campaign action — apply changes to product/variant data ──────────
+// Returns a map of { sku → originalPriceAmount } for CLEARANCE/URGENCY so the
+// caller can store it and revert later. Returns null for informational campaigns.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function executeCampaignAction(campaign: any): Promise<Record<string, number> | null> {
+  const action = campaign.proposedAction as Record<string, unknown>;
+  if (!campaign.productId) return null;
+
+  switch (campaign.type as string) {
+    case "CLEARANCE":
+    case "URGENCY": {
+      const discountPct = typeof action.discountPct === "number" ? action.discountPct : 0;
+      if (discountPct <= 0) return null;
+
+      const variants = await prisma.productVariant.findMany({
+        where: { productId: campaign.productId },
+      });
+
+      const originalPrices: Record<string, number> = {};
+
+      for (const v of variants) {
+        originalPrices[v.sku] = v.priceAmount; // snapshot before change
+        const newPrice = Math.round(v.priceAmount * (1 - discountPct / 100));
+        await prisma.productVariant.update({
+          where: { sku: v.sku },
+          data: { priceAmount: newPrice },
+        });
+
+        // Fix #8: update priceSnapshot on active cart items for this variant
+        // so the policy service doesn't flag a price drift and block checkout
+        await prisma.cartItem.updateMany({
+          where: {
+            variantSku: v.sku,
+            cart: { status: "active" },
+          },
+          data: { priceSnapshot: newPrice },
+        });
+      }
+
+      return originalPrices;
+    }
+
+    case "BUNDLE":
+    case "SEASONAL":
+    case "CROSS_SELL":
+    default:
+      return null;
+  }
+}
+
+// ─── Revert campaign action — restore original prices ────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function revertCampaignAction(campaign: any): Promise<void> {
+  const action = campaign.proposedAction as Record<string, unknown>;
+  const originalPrices = action._originalPrices as Record<string, number> | undefined;
+  if (!originalPrices || Object.keys(originalPrices).length === 0) return;
+
+  for (const [sku, originalPrice] of Object.entries(originalPrices)) {
+    await prisma.productVariant.update({
+      where: { sku },
+      data: { priceAmount: originalPrice },
+    });
+  }
+}
+
+// ─── Dismiss campaign — revert prices if it was active ───────────────────────
 
 export async function dismissCampaign(id: string) {
+  const campaign = await prisma.campaign.findUniqueOrThrow({ where: { id } });
+
+  // If campaign was active and had price changes, revert them
+  if (campaign.status === "active") {
+    await revertCampaignAction(campaign);
+  }
+
   return prisma.campaign.update({
     where: { id },
     data: { status: "dismissed" },
   });
 }
 
+// ─── Expire campaigns — called on server startup and by getActiveCampaigns ───
+
+export async function expireOverdueCampaigns(): Promise<void> {
+  const expired = await prisma.campaign.findMany({
+    where: {
+      status: "active",
+      expiresAt: { lt: new Date() },
+    },
+  });
+
+  for (const campaign of expired) {
+    try {
+      await revertCampaignAction(campaign);
+      await prisma.campaign.update({
+        where: { id: campaign.id },
+        data: { status: "expired" },
+      });
+    } catch (err) {
+      console.error(`[campaign] failed to expire campaign ${campaign.id}:`, err);
+    }
+  }
+}
+
 // ─── Get active campaigns (used by storefront) ───────────────────────────────
 
 export async function getActiveCampaigns() {
+  // Lazily expire overdue campaigns on every storefront fetch — no cron needed
+  await expireOverdueCampaigns();
+
   return prisma.campaign.findMany({
     where: {
       status: "active",

@@ -30,8 +30,8 @@ export function loadAllSessions(): AuditSession[] {
 
 function saveAllSessions(sessions: AuditSession[]) {
   try {
-    // Keep max 20 sessions to avoid localStorage bloat
-    const trimmed = sessions.slice(-20);
+    // Keep max 5 sessions — evict oldest first to prevent localStorage overflow
+    const trimmed = sessions.slice(-5);
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(trimmed));
   } catch { /* ignore */ }
 }

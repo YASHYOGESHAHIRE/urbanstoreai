@@ -54,13 +54,9 @@ export function track(params: TrackParams): void {
     ...params,
   });
 
-  // Use sendBeacon when available (survives page unloads), fall back to fetch
+  // Use fetch with keepalive — survives navigation like sendBeacon but also
+  // forwards the auth token (sendBeacon doesn't support custom headers).
   const url = `${BACKEND}/api/v1/behaviour`;
-  if (navigator.sendBeacon) {
-    const blob = new Blob([body], { type: "application/json" });
-    // sendBeacon doesn't support custom headers — use fetch instead so the
-    // auth token is forwarded for user attribution
-  }
 
   fetch(url, {
     method: "POST",

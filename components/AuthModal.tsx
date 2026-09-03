@@ -116,6 +116,26 @@ export default function AuthModal({
         {/* ── LOGIN FORM ───────────────────────────────────────────────────── */}
         {tab === "login" && (
           <form onSubmit={handleLogin} className="px-6 pb-6 space-y-4">
+
+            {/* Judge quick-access */}
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+              <p className="text-[10px] font-bold text-[#555] uppercase tracking-wider mb-2">
+                🏆 Hackathon Judge Access
+              </p>
+              <button
+                type="button"
+                onClick={() => { setLoginEmail("judge@urbanstore.demo"); setLoginPassword("Judge@2024"); }}
+                className="w-full flex items-center justify-between px-3 py-2 bg-[#111] border border-[#333] rounded-lg hover:border-[#c8f04b]/40 transition-colors group"
+              >
+                <div className="text-left">
+                  <p className="text-white text-[12px] font-semibold">Hackathon Judge</p>
+                  <p className="text-[#555] text-[11px] font-mono">judge@urbanstore.demo</p>
+                </div>
+                <span className="text-[#444] text-[11px] group-hover:text-[#c8f04b] transition-colors font-medium">
+                  Fill →
+                </span>
+              </button>
+            </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#666] uppercase tracking-wider mb-1.5">
                 Email

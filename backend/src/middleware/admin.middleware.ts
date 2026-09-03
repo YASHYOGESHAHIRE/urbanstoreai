@@ -36,14 +36,15 @@ export async function requireAdmin(
   if (!adminOpen) {
     const dbUser = await prisma.user.findUnique({
       where: { id: sessionUser.id },
-      select: { isAdmin: true, isReadOnlyAdmin: true },
+      select: { isAdmin: true },
     });
     if (!dbUser?.isAdmin) {
       reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required." });
       return;
     }
-    // Stamp read-only flag for downstream route handlers to check
-    request.isReadOnlyAdmin = dbUser.isReadOnlyAdmin;
+    // Stamp read-only flag — cast through any until prisma generate runs
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    request.isReadOnlyAdmin = (dbUser as any).isReadOnlyAdmin ?? false;
   }
 
   request.user = sessionUser;

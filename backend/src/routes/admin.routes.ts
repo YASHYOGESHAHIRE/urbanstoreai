@@ -11,6 +11,8 @@ import {
   getCampaignPerformance,
   getCampaignProjectionSummary,
 } from "../services/campaign.service.js";
+import { getAllUsersAuditLogs, getUserAuditLogs } from "../services/audit.service.js";
+import { prisma } from "../db/prisma.js";
 
 export async function adminRoutes(app: FastifyInstance) {
 
@@ -121,7 +123,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/api/v1/admin/campaigns/performance",
     { preHandler: [requireAdmin] },
-    async (_request, reply) => {
+    async (request, reply) => {
       try {
         const cards = await getCampaignPerformance();
         return reply.send({ cards });
@@ -137,7 +139,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/api/v1/admin/campaigns/projection-summary",
     { preHandler: [requireAdmin] },
-    async (_request, reply) => {
+    async (request, reply) => {
       try {
         const summary = await getCampaignProjectionSummary();
         return reply.send({ summary });
@@ -145,6 +147,76 @@ export async function adminRoutes(app: FastifyInstance) {
         request.log.error(err, "projection summary error");
         return reply.code(500).send({ error: "INTERNAL_ERROR" });
       }
+    }
+  );
+
+  // ── GET /api/v1/admin/users ───────────────────────────────────────────────
+  app.get(
+    "/api/v1/admin/users",
+    { preHandler: [requireAdmin] },
+    async (_request, reply) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const users = await (prisma.user.findMany as any)({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isAdmin: true,
+          isReadOnlyAdmin: true,
+          createdAt: true,
+          _count: { select: { orders: true, auditLogs: true } },
+          orders: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { total: true, createdAt: true, status: true },
+          },
+        },
+      }) as any[];
+
+      const enriched = await Promise.all(users.map(async (u) => {
+        const agg = await prisma.order.aggregate({
+          where: { userId: u.id },
+          _sum: { total: true },
+        });
+        return {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          isAdmin: u.isAdmin,
+          isReadOnlyAdmin: u.isReadOnlyAdmin,
+          createdAt: u.createdAt,
+          orderCount: u._count.orders,
+          auditEventCount: u._count.auditLogs,
+          lastOrder: u.orders[0] ?? null,
+          totalSpent: agg._sum.total ?? 0,
+        };
+      }));
+
+      return reply.send({ users: enriched });
+    }
+  );
+
+  // ── GET /api/v1/admin/users/:id/audit ─────────────────────────────────────
+  app.get(
+    "/api/v1/admin/users/:id/audit",
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const query = z.object({ limit: z.coerce.number().optional() }).safeParse(request.query);
+      const limit = query.data?.limit ?? 200;
+
+      const [logs, user] = await Promise.all([
+        getUserAuditLogs(id, limit),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prisma.user.findUnique as any)({
+          where: { id },
+          select: { id: true, name: true, email: true, isAdmin: true, isReadOnlyAdmin: true, createdAt: true },
+        }),
+      ]);
+
+      if (!user) return reply.code(404).send({ error: "USER_NOT_FOUND" });
+      return reply.send({ user, logs });
     }
   );
 }

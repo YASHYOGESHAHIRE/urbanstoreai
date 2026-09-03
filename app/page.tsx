@@ -40,23 +40,44 @@ export default function Home() {
   const [checkoutError, setCheckoutError] = useState("");
 
   // Pre-fetch cart data on mount (so drawer opens instantly)
-  const fetchCart = useCallback(async () => {
+  const fetchCart = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setCartLoading(true);
     try {
       const res = await fetch(`${BACKEND}/api/v1/cart`, { headers: authHeaders() });
       if (!res.ok) return;
       const data: CartData = await res.json();
       setCartData(data);
       setCartCount(data.itemCount ?? 0);
-    } catch { /* silent */ }
+    } catch { /* silent */ } finally {
+      if (showSpinner) setCartLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchCart(); }, [fetchCart]);
 
   const handleCartOpen = useCallback(() => {
-    // Show cached data immediately, then silently refresh in background
+    // Show cached data immediately — only show spinner on very first open
     setCartOpen(true);
-    fetchCart();
-  }, [fetchCart]);
+    if (!cartData) fetchCart(true);
+    else fetchCart(false); // silent background refresh
+  }, [fetchCart, cartData]);
+
+  const handleRemove = useCallback(async (itemId: string) => {
+    setUpdatingItem(itemId);
+    try {
+      const res = await fetch(`${BACKEND}/api/v1/cart/items/${itemId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        const data: CartData = await res.json();
+        setCartData(data);
+        setCartCount(data.itemCount ?? 0);
+      }
+    } finally {
+      setUpdatingItem(null);
+    }
+  }, []);
 
   const handleUpdateQty = useCallback(async (itemId: string, newQty: number) => {
     if (newQty < 1) return handleRemove(itemId);
@@ -75,25 +96,7 @@ export default function Home() {
     } finally {
       setUpdatingItem(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleRemove = useCallback(async (itemId: string) => {
-    setUpdatingItem(itemId);
-    try {
-      const res = await fetch(`${BACKEND}/api/v1/cart/items/${itemId}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (res.ok) {
-        const data: CartData = await res.json();
-        setCartData(data);
-        setCartCount(data.itemCount ?? 0);
-      }
-    } finally {
-      setUpdatingItem(null);
-    }
-  }, []);
+  }, [handleRemove]);
 
   const handleCheckout = useCallback(async () => {
     setCheckingOut(true);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, Copy, Check, ExternalLink, Zap,
+  ArrowLeft, Copy, Check, Zap,
   ShoppingCart, Search, Package, CreditCard,
   ChevronRight, RefreshCw, Eye, EyeOff, Key,
 } from "lucide-react";
@@ -138,23 +138,6 @@ export default function ConnectPage() {
               </button>
             </div>
 
-            {/* One-click deep link — pre-fills Claude integration dialog */}
-            {mcpUrl && (
-              <a
-                href={`https://claude.ai/integrations/add?name=Urban+Store&url=${encodeURIComponent(mcpUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 w-full py-3 mb-4 bg-[#c8f04b] text-black text-[14px] font-black rounded-xl hover:bg-[#b8e03b] transition-colors"
-              >
-                <Zap size={16} fill="black" />
-                Open in Claude — pre-filled
-                <ExternalLink size={14} />
-              </a>
-            )}
-            <p className="text-gray-400 text-[11px] text-center mb-5 -mt-2">
-              Opens Claude with your MCP URL already filled in. Just click Add.
-            </p>
-
             {/* MCP URL — this is what goes into Claude */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">MCP Server URL</p>
@@ -214,12 +197,8 @@ export default function ConnectPage() {
             <div className="flex gap-4 mb-6">
               <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">2</div>
               <div className="flex-1">
-                <p className="text-gray-900 text-[14px] font-semibold mb-2">Open Claude — use the button above or do it manually</p>
-                <div className="bg-[#c8f04b]/10 border border-[#c8f04b]/30 rounded-xl p-3 mb-3">
-                  <p className="text-gray-800 text-[12px] font-semibold mb-1">⚡ Fastest way</p>
-                  <p className="text-gray-600 text-[12px]">Click <strong>&quot;Open in Claude — pre-filled&quot;</strong> above. Claude opens with your MCP URL already in the field. You just click Add.</p>
-                </div>
-                <p className="text-gray-400 text-[12px] mb-3">Or manually — Claude has two places where you can add a connector:</p>
+                <p className="text-gray-900 text-[14px] font-semibold mb-2">Open Claude and navigate to the MCP Connectors setup</p>
+                <p className="text-gray-400 text-[12px] mb-3">Claude has two places where you can add a connector:</p>
 
                 {/* Path A */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3">
@@ -241,11 +220,6 @@ export default function ConnectPage() {
                       <p className="text-gray-500 text-[12px]">Click <strong className="text-gray-700">Add Integration</strong> → then select <strong className="text-gray-700">Custom</strong></p>
                     </div>
                   </div>
-                  <a href="https://claude.ai/settings/integrations" target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-3 ml-7 px-3 py-1.5 bg-black text-white text-[11px] font-bold rounded-lg hover:bg-gray-800 transition-colors">
-                    Open Integrations
-                    <ExternalLink size={11} />
-                  </a>
                 </div>
 
                 {/* Path B */}

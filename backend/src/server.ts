@@ -49,35 +49,23 @@ async function bootstrap() {
     }
   });
 
-  // Allow empty JSON bodies — needed for POST /api/v1/checkout and similar
   app.addContentTypeParser(
     "application/json",
     { parseAs: "string" },
     function (req, body, done) {
-      if (!body || body === "") {
-        done(null, {});
-        return;
-      }
-      try {
-        done(null, JSON.parse(body as string));
-      } catch (err) {
-        done(err as Error, undefined);
-      }
+      if (!body || body === "") { done(null, {}); return; }
+      try { done(null, JSON.parse(body as string)); }
+      catch (err) { done(err as Error, undefined); }
     }
   );
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
 
-  // ── CORS ────────────────────────────────────────────────────────────────────
   await app.register(fastifyCors, {
     origin: (origin, cb) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
       if (!origin) return cb(null, true);
-      // Allow localhost for local dev
       if (origin.startsWith("http://localhost")) return cb(null, true);
-      // Allow exact frontend URL
       if (origin === frontendUrl) return cb(null, true);
-      // Allow any Vercel preview/production subdomain
       if (origin.endsWith(".vercel.app")) return cb(null, true);
       cb(new Error("Not allowed by CORS"), false);
     },
@@ -86,162 +74,139 @@ async function bootstrap() {
     allowedHeaders: ["Content-Type", "Authorization"],
   });
 
-  // ── Cookies ─────────────────────────────────────────────────────────────────
   await app.register(fastifyCookie, {
     secret: process.env.COOKIE_SECRET ?? "change-me-in-production",
   });
 
-  // ── Auth + OAuth (rate limited) ──────────────────────────────────────────────
-  await app.register(async (limitedApp) => {
-    await limitedApp.register(fastifyRateLimit, {
+  // ── Auth + OAuth — 20/min per IP ─────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 20,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
-      errorResponseBuilder(_err, context) {
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await limitedApp.register(authRoutes);
-    await limitedApp.register(oauthRoutes);
+    await s.register(authRoutes);
+    await s.register(oauthRoutes);
   });
 
   await protocolDiscoveryRoutes(app);
 
-  // ── Catalog (public) — 120/min per IP ────────────────────────────────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Catalog — 120/min per IP ──────────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 120,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
-      errorResponseBuilder(_err, context) {
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(catalogRoutes);
+    await s.register(catalogRoutes);
   });
 
-  // ── Cart — 60/min IP + 30/min USER (key=user if present else ip, max=30) ────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Cart — 30/min per user or IP ──────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
-      keyGenerator: (req) => {
-        const userId = (req as any).user?.id;
-        return userId ? `u:${userId}` : `ip:${req.ip}`;
-      },
-      header: true,
-      errorResponseBuilder(_err, context) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      keyGenerator: (req) => { const uid = (req as any).user?.id; return uid ? `u:${uid}` : `ip:${req.ip}`; },
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(cartRoutes);
+    await s.register(cartRoutes);
   });
 
-  // ── Checkout — 20/min IP + 10/min USER (strictest, money action) ─────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Checkout — 10/min per user or IP (strictest) ──────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 10,
       timeWindow: 60_000,
-      keyGenerator: (req) => {
-        const userId = (req as any).user?.id;
-        return userId ? `u:${userId}` : `ip:${req.ip}`;
-      },
-      header: true,
-      errorResponseBuilder(_err, context) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      keyGenerator: (req) => { const uid = (req as any).user?.id; return uid ? `u:${uid}` : `ip:${req.ip}`; },
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(checkoutRoutes);
+    await s.register(checkoutRoutes);
   });
 
-  // ── Orders — 60/min IP + 30/min USER ─────────────────────────────────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Orders — 30/min per user or IP ───────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
-      keyGenerator: (req) => {
-        const userId = (req as any).user?.id;
-        return userId ? `u:${userId}` : `ip:${req.ip}`;
-      },
-      header: true,
-      errorResponseBuilder(_err, context) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      keyGenerator: (req) => { const uid = (req as any).user?.id; return uid ? `u:${uid}` : `ip:${req.ip}`; },
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(orderRoutes);
+    await s.register(orderRoutes);
   });
 
-  // ── Agent (rate limited) — PRESERVED existing 30/min cap ─────────────────────
-  await app.register(async (limitedApp) => {
-    await limitedApp.register(fastifyRateLimit, {
+  // ── Agent — 30/min per IP ─────────────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
-      errorResponseBuilder(_err, context) {
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await limitedApp.register(agentRoutes);
+    await s.register(agentRoutes);
   });
 
-  // ── OpenAPI spec (public) ──────────────────────────────────────────────────
   await app.register(openApiRoutes);
 
-  // ── Admin — 60/min per USER (user required for admin) ─────────────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Admin — 60/min per user or IP ─────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 60,
       timeWindow: 60_000,
-      keyGenerator: (req) => {
-        const userId = (req as any).user?.id;
-        return userId ? `u:${userId}` : `ip:${req.ip}`;
-      },
-      header: true,
-      errorResponseBuilder(_err, context) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      keyGenerator: (req) => { const uid = (req as any).user?.id; return uid ? `u:${uid}` : `ip:${req.ip}`; },
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(adminRoutes);
+    await s.register(adminRoutes);
   });
 
-  // ── Behaviour tracking — 120/min per IP ────────────────────────────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── Behaviour — 120/min per IP ────────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 120,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
-      errorResponseBuilder(_err, context) {
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(behaviourRoutes);
+    await s.register(behaviourRoutes);
   });
 
-  // ── MCP — 60/min IP + 30/min GRANT ID ──────────────────────────────────────
-  await app.register(async (scoped) => {
-    await scoped.register(fastifyRateLimit, {
+  // ── MCP — 30/min per grant or IP ─────────────────────────────────────────
+  await app.register(async (s) => {
+    await s.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
-      keyGenerator: (req) => {
-        const grantId = (req as any).agent?.grantId;
-        return grantId ? `g:${grantId}` : `ip:${req.ip}`;
-      },
-      header: true,
-      errorResponseBuilder(_err, context) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      keyGenerator: (req) => { const gid = (req as any).agent?.grantId; return gid ? `g:${gid}` : `ip:${req.ip}`; },
+      errorResponseBuilder(_err: unknown, context: { ttl: number }) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
-    await scoped.register(mcpRoutes);
+    await s.register(mcpRoutes);
   });
 
-  // ── Webhooks (raw body needed for HMAC verification) ──────────────────────
   await app.register(webhookRoutes);
 
-  // ── Health ────────────────────────────────────────────────────────────────────
   app.get("/health", async (_req, reply) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -255,37 +220,11 @@ async function bootstrap() {
   const port = parseInt(process.env.PORT ?? "4000", 10);
   await app.listen({ host, port });
 
-  // ── Startup tasks ─────────────────────────────────────────────────────────
-  // Expire any campaigns that lapsed while the server was down
   expireOverdueCampaigns().catch((err) =>
     console.error("[startup] campaign expiry failed:", err)
   );
 
-  console.log(`\n Urban Store Backend  http://localhost:${port}`);
-  console.log(`\n AUTH`);
-  console.log(`  POST  /auth/register`);
-  console.log(`  POST  /auth/login`);
-  console.log(`  POST  /auth/logout`);
-  console.log(`  GET   /auth/me`);
-  console.log(`\n CATALOG`);
-  console.log(`  POST  /api/v1/catalog/search`);
-  console.log(`  GET   /api/v1/products/:id`);
-  console.log(`  GET   /api/v1/products/:id/availability`);
-  console.log(`\n CART`);
-  console.log(`  GET   /api/v1/cart`);
-  console.log(`  POST  /api/v1/cart/items`);
-  console.log(`  PATCH /api/v1/cart/items/:itemId`);
-  console.log(`  DELETE /api/v1/cart/items/:itemId`);
-  console.log(`\n CHECKOUT`);
-  console.log(`  POST  /api/v1/checkout`);
-  console.log(`  GET   /api/v1/checkout/:id`);
-  console.log(`  POST  /api/v1/checkout/:id/confirm`);
-  console.log(`\n ORDERS`);
-  console.log(`  GET   /api/v1/orders`);
-  console.log(`  GET   /api/v1/orders/:id`);
-  console.log(`  POST  /api/v1/orders/:id/cancel`);
-  console.log(`\n AGENT`);
-  console.log(`  POST  /api/v1/agent/chat\n`);
+  console.log(`\n Urban Store Backend  http://localhost:${port}\n`);
 }
 
 bootstrap().catch((err) => {

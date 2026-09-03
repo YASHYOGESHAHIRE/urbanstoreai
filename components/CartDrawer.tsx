@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   X, Minus, Plus, Trash2, Lock,
   Loader2, ShoppingBag, ArrowRight, Tag, ShieldCheck,
 } from "lucide-react";
-import { authHeaders } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4000";
 
 function fmt(n: number) { return `₹${n.toLocaleString("en-IN")}`; }
 
@@ -87,9 +83,6 @@ export default function CartDrawer({
   updatingItem, onUpdateQty, onRemove,
   onCheckout, checkingOut, checkoutError,
 }: CartDrawerProps) {
-  const router = useRouter();
-  const overlayRef = useRef<HTMLDivElement>(null);
-
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -113,7 +106,6 @@ export default function CartDrawer({
     <>
       {/* Backdrop */}
       <div
-        ref={overlayRef}
         onClick={onClose}
         className={`fixed inset-0 bg-black/30 z-[60] transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       />

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
-  LayoutDashboard, Megaphone, Zap, ArrowLeft, ChevronRight,
+  LayoutDashboard, Megaphone, Zap, ArrowLeft, ChevronRight, Users,
 } from "lucide-react";
 import { authHeaders } from "@/lib/auth";
 
@@ -44,6 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const nav = [
     { href: "/admin",           label: "Dashboard",  icon: LayoutDashboard },
     { href: "/admin/campaigns", label: "Campaigns",  icon: Megaphone       },
+    { href: "/admin/users",     label: "Users",      icon: Users           },
   ];
 
   return (

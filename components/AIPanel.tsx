@@ -685,6 +685,17 @@ export default function AIPanel({ onClose, initialQuery }: AIPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
+  // Focus input when header search icon is clicked
+  useEffect(() => {
+    const handler = () => {
+      // Try immediately, then retry after animations settle
+      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 150);
+    };
+    window.addEventListener("urban_focus_ai_input", handler);
+    return () => window.removeEventListener("urban_focus_ai_input", handler);
+  }, []);
+
   // ─── Add to cart ────────────────────────────────────────────────────────────
 
   const handleAddToCart = useCallback(async (product: ProductData) => {

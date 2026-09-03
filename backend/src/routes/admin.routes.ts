@@ -8,6 +8,8 @@ import {
   approveCampaign,
   dismissCampaign,
   getActiveCampaigns,
+  getCampaignPerformance,
+  getCampaignProjectionSummary,
 } from "../services/campaign.service.js";
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -70,7 +72,19 @@ export async function adminRoutes(app: FastifyInstance) {
       try {
         const campaign = await approveCampaign(id);
         return reply.send({ campaign });
-      } catch {
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.message === "CAMPAIGN_MARGIN_POLICY") {
+            return reply.code(400).send({
+              error: "CAMPAIGN_MARGIN_POLICY",
+              policy: (err as { policy?: unknown }).policy,
+            });
+          }
+          if (err.message === "Not Found") {
+            return reply.code(404).send({ error: "CAMPAIGN_NOT_FOUND" });
+          }
+        }
+        request.log.error(err, "approve campaign error");
         return reply.code(404).send({ error: "CAMPAIGN_NOT_FOUND" });
       }
     }
@@ -97,6 +111,40 @@ export async function adminRoutes(app: FastifyInstance) {
     async (_request, reply) => {
       const campaigns = await getActiveCampaigns();
       return reply.send({ campaigns });
+    }
+  );
+
+  // ── GET /api/v1/admin/campaigns/performance — revenue loop
+  // Returns one performance-card per approved campaign: projected vs actual
+  // units + revenue, delta %, verdict, and narrative feedback for next round.
+  // Direct answer to "grow the merchant's revenue — measured, not projected."
+  app.get(
+    "/api/v1/admin/campaigns/performance",
+    { preHandler: [requireAdmin] },
+    async (_request, reply) => {
+      try {
+        const cards = await getCampaignPerformance();
+        return reply.send({ cards });
+      } catch (err: unknown) {
+        request.log.error(err, "campaign performance error");
+        return reply.code(500).send({ error: "INTERNAL_ERROR" });
+      }
+    }
+  );
+
+  // ── GET /api/v1/admin/campaigns/projection-summary — single glance header
+  // Aggregate accuracy number, verdict counts, total projected vs actual.
+  app.get(
+    "/api/v1/admin/campaigns/projection-summary",
+    { preHandler: [requireAdmin] },
+    async (_request, reply) => {
+      try {
+        const summary = await getCampaignProjectionSummary();
+        return reply.send({ summary });
+      } catch (err: unknown) {
+        request.log.error(err, "projection summary error");
+        return reply.code(500).send({ error: "INTERNAL_ERROR" });
+      }
     }
   );
 }

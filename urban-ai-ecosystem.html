@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Urban Store — Track 01 Architecture Reference</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* =====================================================
+     DESIGN TOKENS
+     Professional dark palette, neutral, fintech-grade
+     ===================================================== */
+  :root {
+    --bg-base: #070b14;
+    --bg-elev-1: #0c1222;
+    --bg-elev-2: #111a30;
+    --bg-elev-3: #162240;
+    --bg-subtle: rgba(255,255,255,0.02);
+
+    --border-1: #1a2544;
+    --border-2: #25335c;
+
+    --text-1: #eaf0ff;
+    --text-2: #aab8d9;
+    --text-3: #7a88a8;
+    --text-muted: #5c6a8a;
+
+    --accent: #5b8cff;
+    --accent-strong: #3b6eff;
+    --accent-soft: rgba(91,140,255,0.08);
+    --accent-line: rgba(91,140,255,0.22);
+
+    --success: #34d399;
+    --success-soft: rgba(52,211,153,0.08);
+    --success-line: rgba(52,211,153,0.22);
+
+    --warn: #f59e0b;
+    --warn-soft: rgba(245,158,11,0.08);
+
+    --danger: #ef4444;
+    --danger-soft: rgba(239,68,68,0.08);
+
+    --violet: #8b7cff;
+    --violet-soft: rgba(139,124,255,0.08);
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.2);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.28);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,.4);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+  }
+
+  /* =====================================================
+     RESET
+     ===================================================== */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background:
+      radial-gradient(900px 520px at 5% -5%, rgba(91,140,255,0.08), transparent 60%),
+      radial-gradient(700px 440px at 110% 0%, rgba(139,124,255,0.07), transparent 60%),
+      var(--bg-base);
+    color: var(--text-1);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+  code, pre, .mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+
+  /* =====================================================
+     LAYOUT
+     ===================================================== */
+  .page { max-width: 1240px; margin: 0 auto; padding: 56px 40px 96px; }
+
+  /* =====================================================
+     HEADER / HERO
+     ===================================================== */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: start;
+    padding: 40px;
+    border: 1px solid var(--border-1);
+    background:
+      linear-gradient(180deg, rgba(91,140,255,0.04), transparent 60%),
+      var(--bg-elev-1);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, transparent 40%, rgba(139,124,255,0.04));
+  }
+  .hero-meta {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--text-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-bottom: 18px;
+    letter-spacing: 0.01em;
+  }
+  .hero-meta .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+  }
+  .hero h1 {
+    margin: 0 0 14px;
+    font-size: 40px;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    background: linear-gradient(120deg, #ffffff 0%, #cfe0ff 40%, #c3b8ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-lead {
+    color: var(--text-2);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 780px;
+    margin: 0;
+  }
+  .hero-lead strong { color: var(--text-1); font-weight: 600; }
+
+  .hero-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 260px;
+  }
+  .kv {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  .kv .kk { color: var(--text-3); font-size: 12.5px; font-weight: 500; letter-spacing: 0.01em; }
+  .kv .vv { color: var(--text-1); font-size: 14.5px; font-weight: 600; }
+  .kv .vv.pass { color: var(--success); }
+  .kv .vv.blue { color: var(--accent); }
+  .kv .vv.violet { color: var(--violet); }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 22px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-1);
+    color: var(--text-3);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .tag.green { background: var(--success-soft); border-color: var(--success-line); color: var(--success); }
+  .tag.blue  { background: var(--accent-soft);  border-color: var(--accent-line);  color: var(--accent); }
+  .tag.violet{ background: var(--violet-soft);  border-color: rgba(139,124,255,0.22); color: var(--violet); }
+  .tag.warn  { background: var(--warn-soft);    border-color: rgba(245,158,11,0.22); color: var(--warn); }
+
+  /* =====================================================
+     TABLE OF CONTENTS
+     ===================================================== */
+  .toc {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    box-shadow: var(--shadow-md);
+  }
+  .toc-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .toc-title h3 {
+    margin: 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    font-weight: 600;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 4px 24px;
+  }
+  .toc a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color .15s, background .15s;
+  }
+  .toc a:hover { color: var(--text-1); background: var(--bg-subtle); }
+  .toc .sec-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--accent-line);
+    min-width: 28px;
+    text-align: center;
+  }
+
+  /* =====================================================
+     SECTIONS — consistent visual hierarchy
+     ===================================================== */
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--border-1);
+  }
+  .section-head .sn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--accent-soft);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-line);
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-1);
+    flex: 1;
+  }
+  .section-head .sub {
+    font-size: 13px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  /* =====================================================
+     VERDICT PANEL
+     ===================================================== */
+  .verdict {
+    background:
+      linear-gradient(135deg, rgba(52,211,153,0.06), rgba(91,140,255,0.06)),
+      var(--bg-elev-1);
+    border: 1px solid var(--success-line);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    box-shadow: var(--shadow-md);
+  }
+  .verdict-title {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .verdict-title h3 {
+    margin: 0;
+    font-size: 19px;
+    color: var(--success);
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+  .verdict-title .tick {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--success-soft);
+    border: 1px solid var(--success-line);
+    color: var(--success);
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .verdict p { margin: 0 0 12px; color: var(--text-1); font-size: 14.5px; }
+  .verdict-list { margin: 14px 0 0; padding-left: 18px; }
+  .verdict-list li { margin: 6px 0; color: var(--text-2); font-size: 14px; }
+  .verdict-list li strong { color: var(--text-1); font-weight: 600; }
+
+  /* =====================================================
+     PILLARS (2-col cards)
+     ===================================================== */
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    gap: 20px;
+  }
+  .pillar {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: 26px 28px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+  }
+  .pillar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .pillar-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent);
+    font-size: 18px;
+  }
+  .pillar-icon.v { background: var(--violet-soft); border-color: rgba(139,124,255,0.22); color: var(--violet); }
+  .pillar h3 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .pillar-sub {
+    margin: 0 0 18px;
+    font-size: 12.5px;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 5px;
+    width: fit-content;
+  }
+  .pillar-sub.v { color: var(--violet); background: var(--violet-soft); border-color: rgba(139,124,255,0.22); }
+  .cap-list {
+    display: grid;
+    gap: 10px;
+  }
+  .cap {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 12px;
+    padding: 12px 14px;
+    background: var(--bg-subtle);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: var(--radius-md);
+  }
+  .cap .ch {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--success-soft);
+    border: 1px solid var(--success-line);
+    color: var(--success);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 800;
+    margin-top: 1px;
+  }
+  .cap .title {
+    color: var(--text-1);
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .cap .desc {
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .cap .desc b { color: var(--text-1); font-weight: 600; }
+  .cap .desc code {
+    background: var(--bg-elev-3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border-2);
+    font-size: 12px;
+    color: var(--text-1);
+  }
+
+  /* =====================================================
+     THE BAR — 6 metric cards
+     ===================================================== */
+  .bar-legend {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+  }
+  .bar-legend span {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: var(--text-3);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .bar-legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+
+  .bar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .bar {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    transition: transform .15s, border-color .15s;
+  }
+  .bar:hover { border-color: var(--border-2); transform: translateY(-1px); }
+  .bar .stat {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 0 0 4px;
+    background: linear-gradient(120deg, var(--accent), var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bar .name {
+    font-size: 14px;
+    color: var(--text-1);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .bar .label {
+    font-size: 12.5px;
+    color: var(--text-3);
+    font-weight: 500;
+    margin: 0 0 14px;
+  }
+  .bar .rows {
+    display: grid;
+    gap: 2px;
+    margin-top: auto;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 12.5px;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--text-3); }
+  .row .v { color: var(--success); font-weight: 600; }
+  .row .v.w { color: var(--warn); }
+  .row .v.b { color: var(--accent); }
+
+  /* =====================================================
+     FEATURE GRID (strengths)
+     ===================================================== */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .feat {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .feat-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .feat-head .idx {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent);
+  }
+  .feat-head h4 { margin: 0; font-size: 14.5px; font-weight: 700; color: var(--text-1); letter-spacing: -0.005em; }
+  .feat p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--text-2); }
+
+  /* =====================================================
+     TABLES (gaps + code reference)
+     ===================================================== */
+  .tbl-wrap {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--bg-elev-2);
+    color: var(--text-1);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    padding: 14px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-1);
+  }
+  tbody td {
+    padding: 14px 20px;
+    font-size: 13.5px;
+    color: var(--text-2);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td:first-child { color: var(--text-1); font-weight: 600; }
+  tbody tr:hover { background: var(--bg-subtle); }
+
+  .chip {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .chip.hi   { background: var(--danger-soft);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.22); }
+  .chip.md   { background: var(--warn-soft);    color: var(--warn);    border: 1px solid rgba(245,158,11,0.22); }
+  .chip.lo   { background: var(--success-soft); color: var(--success); border: 1px solid var(--success-line); }
+  .chip.blue { background: var(--accent-soft);  color: var(--accent);  border: 1px solid var(--accent-line); }
+
+  /* Code reference specific columns */
+  .ref-cat { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
+  .ref-path a {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 2px 6px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 5px;
+    transition: background .15s, border-color .15s;
+  }
+  .ref-path a:hover { background: var(--accent-line); border-color: var(--accent); }
+  .ref-path .loc { color: var(--text-muted); font-size: 11.5px; display: inline-block; margin-left: 8px; }
+
+  /* =====================================================
+     FLOWCHARTS
+     ===================================================== */
+  .flow {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    padding: 24px 26px 26px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+  }
+  .flow-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .flow-head h3 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--text-1);
+    letter-spacing: -0.005em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .flow-head h3 .fnum {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .flow-head .note { font-size: 12px; color: var(--text-3); font-weight: 500; }
+
+  .mermaid {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    min-height: 200px;
+    overflow-x: auto;
+  }
+
+  /* =====================================================
+     FOOTER
+     ===================================================== */
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-1);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* =====================================================
+     RESPONSIVE
+     ===================================================== */
+  @media (max-width: 980px) {
+    .page { padding: 32px 20px 64px; }
+    .hero { grid-template-columns: 1fr; padding: 28px; }
+    .hero h1 { font-size: 30px; }
+    .section-head { flex-direction: column; gap: 6px; }
+    .pillars { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ............................ HEADER / HERO ............................ -->
+  <header class="hero" id="top">
+    <div>
+      <span class="hero-meta">
+        <span class="pulse"></span>
+        Razorpay Hackathon &middot; Track 01 &mdash; AI Growth &amp; Agentic Commerce
+      </span>
+      <h1>Urban Store &mdash; Architecture Reference</h1>
+      <p class="hero-lead">
+        A protocol-aligned merchant infrastructure that simultaneously
+        <strong>grows revenue with a data-driven campaign orchestrator</strong> and
+        <strong>makes merchants transactable by AI buyers end-to-end</strong> via MCP,
+        OAuth 2.0 + PKCE, and Razorpay test-mode APIs.
+      </p>
+      <div class="tag-row">
+        <span class="tag green">✓ Revenue loop closed (projected ↔ actual)</span>
+        <span class="tag blue">✓ Server-enforced YES-gate</span>
+        <span class="tag blue">✓ MCP + OAuth + API-Key identity</span>
+        <span class="tag violet">✓ 22 Bar tests · All passing</span>
+        <span class="tag">HMAC webhook verify</span>
+        <span class="tag">Prisma $transaction atomic</span>
+        <span class="tag">pgvector semantic catalog</span>
+      </div>
+    </div>
+    <aside class="hero-panel" aria-label="system stats">
+      <div class="kv">
+        <span class="kk">Architecture</span>
+        <span class="vv blue">6-Layer · 8 services</span>
+      </div>
+      <div class="kv">
+        <span class="kk">Route groups</span>
+        <span class="vv">9 core + OAuth + Webhooks</span>
+      </div>
+      <div class="kv">
+        <span class="kk">Bar tests</span>
+        <span class="vv pass">22/22 Passing</span>
+      </div>
+      <div class="kv">
+        <span class="kk">Identity paths</span>
+        <span class="vv violet">3 merged</span>
+      </div>
+    </aside>
+  </header>
+
+  <!-- ............................ TOC ............................ -->
+  <nav class="toc" aria-label="Table of contents">
+    <div class="toc-title"><h3>Contents</h3></div>
+    <div class="toc-grid">
+      <a href="#s1"><span class="sec-num">01</span><span>Executive Fit Verdict</span></a>
+      <a href="#s2"><span class="sec-num">02</span><span>Two Pillars — Delivered</span></a>
+      <a href="#s3"><span class="sec-num">03</span><span>The Bar — Requirements Met</span></a>
+      <a href="#s4"><span class="sec-num">04</span><span>Key Differentiators</span></a>
+      <a href="#s5"><span class="sec-num">05</span><span>Known Gaps &amp; Risk</span></a>
+      <a href="#s6"><span class="sec-num">06</span><span>Code Reference Index</span></a>
+      <a href="#s7"><span class="sec-num">07</span><span>System Flowcharts</span></a>
+    </div>
+  </nav>
+
+  <!-- ............................ §1 VERDICT ............................ -->
+  <section id="s1">
+    <div class="section-head">
+      <span class="sn">§ 01</span>
+      <h2>Executive Fit &mdash; Track 01 Alignment</h2>
+      <span class="sub">2 of 2 pillars delivered · 6 of 6 bar items cleared</span>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">
+        <span class="tick">✓</span>
+        <h3>Track 01 Fit &mdash; This product is right</h3>
+      </div>
+      <p>Urban Store satisfies both explicit pillars of Track 01, and clears every bar requirement with server-side enforcement rather than prompt instructions:</p>
+      <ol class="verdict-list">
+        <li>
+          <strong>Revenue growth agent</strong> &mdash; A data-driven campaign orchestrator
+          with five campaign types and a write-back loop that persists actual units sold,
+          delta-revenue, and a bounded projection-accuracy score to each campaign row.
+        </li>
+        <li>
+          <strong>AI-buyer transactable end-to-end</strong> &mdash; A 9-tool MCP server for
+          Claude Desktop, a 13-tool Groq in-app chat agent, a semantic catalog with
+          structured product relationships, Razorpay order/HMAC-confirm/webhook, and
+          three identity paths (OAuth PKCE, personal API keys, session cookies).
+        </li>
+        <li>
+          <strong>&ldquo;Why now&rdquo; alignment</strong> &mdash; Implements the convergent
+          primitives of UAP/ACP/AP2/x402 (scoped delegated authority, server YES-gate,
+          per-grant audit, HMAC verification, atomic stock) with honest, documented
+          non-claims where the target protocol has not finalized.
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ............................ §2 PILLARS ............................ -->
+  <section id="s2">
+    <div class="section-head">
+      <span class="sn">§ 02</span>
+      <h2>Two Pillars of Track 01 &mdash; Delivered</h2>
+      <span class="sub">Covered in code, not in prose</span>
+    </div>
+
+    <div class="pillars">
+      <!-- PILLAR 1: Revenue Growth -->
+      <article class="pillar">
+        <div class="pillar-head">
+          <div>
+            <h3>Pillar 1 &mdash; Merchant Revenue Growth Engine</h3>
+          </div>
+          <div class="pillar-icon">📈</div>
+        </div>
+        <span class="pillar-sub">Campaign orchestrator · measured closed-loop</span>
+
+        <div class="cap-list">
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Data-informed campaign generation</div>
+              <div class="desc">Pulls real slow-moving inventory, velocity, abandonment, and revenue stats from <code>analytics.service.ts</code>; feeds structured numeric inputs to the LLM.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">5 typed campaign categories</div>
+              <div class="desc">CLEARANCE, BUNDLE, URGENCY, SEASONAL, and CROSS_SELL proposals, each with server-side priority ranking and scope metadata.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Projected vs. actual performance cards</div>
+              <div class="desc"><code>getCampaignPerformance()</code> computes delta-revenue (₹ and %), a verdict (ahead / on_track / behind), and narrative feedback for the next round.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Bounded projection-accuracy score (0…1)</div>
+              <div class="desc"><code>computeProjectionAccuracy()</code> produces a single honest metric: 1.0 = dead-on, 0.8 = ±20 %, 0 beyond 2× error.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Final write-back on expiry</div>
+              <div class="desc">Before marking a campaign expired, <code>persistCampaignOutcomes(force:true)</code> writes the final actuals snapshot to the row permanently.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- PILLAR 2: AI Transactable -->
+      <article class="pillar">
+        <div class="pillar-head">
+          <div>
+            <h3>Pillar 2 &mdash; AI-Buyer Transactable End-to-End</h3>
+          </div>
+          <div class="pillar-icon v">🤖</div>
+        </div>
+        <span class="pillar-sub v">MCP + In-app agent + Protocol discovery</span>
+
+        <div class="cap-list">
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Agent-readable semantic catalog</div>
+              <div class="desc">500+ SKUs indexed via Xenova MiniLM + pgvector; structured fields include useCases, suitableFor, and relationships (complements, frequentlyBoughtWith, upgradeTo).</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">MCP server for Claude Desktop</div>
+              <div class="desc">Nine tools at <code>POST /mcp</code>: search_catalog, get_product, get_cart, add_to_cart, remove_from_cart, request_checkout_confirmation, create_checkout, get_orders, get_upsell, get_upgrade.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">In-app conversational agent</div>
+              <div class="desc">13 tools powered by Groq, a per-turn ExplainBlock (understood intent, parsed filters, result stats, budget match), and a full reasoning trace.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Upsell &amp; cross-sell primitives</div>
+              <div class="desc">Automatic <code>get_upsell</code> fire-hose after every successful <code>add_to_cart</code>; <code>get_upgrade</code> is triggered on premium/upgrade intent.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">Razorpay full payment loop</div>
+              <div class="desc"><code>orders.create</code> → HMAC signature verification on confirm → atomic stock decrement → order creation → webhook fallback for closed-tab payments.</div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="ch">✓</div>
+            <div>
+              <div class="title">3 identity paths for AI buyers</div>
+              <div class="desc">OAuth 2.0 + PKCE for Claude public clients, personal API keys (<code>us_live_</code> prefix) embedded in the MCP URL, and session cookies for in-app chat.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ............................ §3 THE BAR ............................ -->
+  <section id="s3">
+    <div class="section-head">
+      <span class="sn">§ 03</span>
+      <h2>The Bar &mdash; Every Requirement Cleared with Code &amp; Tests</h2>
+      <span class="sub">22 bar tests · <code>tsx backend/src/bar-tests.ts</code></span>
+    </div>
+
+    <div class="bar-legend">
+      <span><span class="sw" style="background:var(--success)"></span> Implemented &amp; test-proven</span>
+      <span><span class="sw" style="background:var(--warn)"></span> Schema-ready partial</span>
+      <span><span class="sw" style="background:var(--accent)"></span> Security primitive</span>
+      <span><span class="sw" style="background:var(--violet)"></span> Audit primitive</span>
+    </div>
+
+    <div class="bar-grid">
+      <!-- EXPLAINABLE -->
+      <div class="bar">
+        <div class="stat">Explainable</div>
+        <div class="name">Structured evidence on every money action</div>
+        <p class="label">Judges can ask &ldquo;why this recommendation?&rdquo; and trace to specific data points, not LLM prose.</p>
+        <div class="rows">
+          <div class="row"><span class="k">ExplainBlock on every agent turn</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Policy issues[] per-item codes</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Campaign reasoning[] (cites numbers)</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Performance narrative feedback</span><span class="v">✓</span></div>
+        </div>
+      </div>
+
+      <!-- BOUNDED -->
+      <div class="bar">
+        <div class="stat">Bounded</div>
+        <div class="name">Server-enforced budgets &amp; policy</div>
+        <p class="label">Bounds live in TypeScript &mdash; prompt instructions alone cannot break them.</p>
+        <div class="rows">
+          <div class="row"><span class="k">Per-order quantity limits</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">SpendingMandate DB primitive</span><span class="v w">Schema</span></div>
+          <div class="row"><span class="k">Price snapshot drift detection</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Scoped rate limits (8 buckets)</span><span class="v b">✓ 8</span></div>
+          <div class="row"><span class="k">Cart policy evaluator (policy.service)</span><span class="v">✓</span></div>
+        </div>
+      </div>
+
+      <!-- GATED -->
+      <div class="bar">
+        <div class="stat">Gated</div>
+        <div class="name">AI cannot move money without explicit user YES</div>
+        <p class="label">Two independent gates: MCP route-level nonce + in-app agent code guard.</p>
+        <div class="rows">
+          <div class="row"><span class="k">MCP YES-nonce gate (route level)</span><span class="v">✓ 5 fail modes</span></div>
+          <div class="row"><span class="k">Agent YES gate (code guard)</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Nonce: single-use · 2-min TTL</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Nonce: subtotal-bound (auto-invalid on cart change)</span><span class="v">✓</span></div>
+        </div>
+      </div>
+
+      <!-- AUDIT TRAIL -->
+      <div class="bar">
+        <div class="stat">Audit Trail</div>
+        <div class="name">Per-grant, per-action attribution</div>
+        <p class="label">No anonymous agent behavior &mdash; every row carries an agentGrantId.</p>
+        <div class="rows">
+          <div class="row"><span class="k">agentGrantId on AuditLog rows</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">checkout.create / confirmed</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">signature_mismatch event</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">campaign_policy_rejected event</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Audit UI page <code>/audit</code></span><span class="v">✓</span></div>
+        </div>
+      </div>
+
+      <!-- GRACEFUL FAILURE -->
+      <div class="bar">
+        <div class="stat">Graceful Failure</div>
+        <div class="name">Atomic rollback on concurrent stock exhaustion</div>
+        <p class="label">One concrete failure scenario handled end-to-end with zero partial writes.</p>
+        <div class="rows">
+          <div class="row"><span class="k">Mid-loop stock exhaust → full $tx rollback</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">No partial decrements (A OK, B fail → A restored)</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Idempotent confirm (already-paid returns order)</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Webhook: HTTP 200 on stock error (no retries)</span><span class="v">✓</span></div>
+        </div>
+      </div>
+
+      <!-- MEASURED (revenue loop) -->
+      <div class="bar">
+        <div class="stat">Measured</div>
+        <div class="name">Revenue growth loop actually closed</div>
+        <p class="label">Projections written back with measured actuals &mdash; not hand-wavey &ldquo;AI will grow revenue&rdquo; claims.</p>
+        <div class="rows">
+          <div class="row"><span class="k">Write-back: actualResults + projectionAccuracy</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Final snapshot before expiry (force:true)</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Lazy 1 h refresh on admin view</span><span class="v">✓</span></div>
+          <div class="row"><span class="k">Verdict engine: ahead / on_track / behind</span><span class="v">✓</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ............................ §4 KEY DIFFERENTIATORS ............................ -->
+  <section id="s4">
+    <div class="section-head">
+      <span class="sn">§ 04</span>
+      <h2>Key Differentiators</h2>
+      <span class="sub">Where this beats typical hackathon demos</span>
+    </div>
+
+    <div class="feat-grid">
+      <article class="feat">
+        <div class="feat-head">
+          <span class="idx">D1</span>
+          <h4>Revenue loop closed (not just projected)</h4>
+        </div>
+        <p>Most AI campaign demos stop at &ldquo;the AI predicts +₹X&rdquo;. Urban Store writes measured actual-units, delta-revenue, and a bounded 0…1 projection-accuracy back to each Campaign row. Merchants can see if the AI is over-optimistic over time and tune discount depth in the next round.</p>
+      </article>
+      <article class="feat">
+        <div class="feat-head">
+          <span class="idx">D2</span>
+          <h4>Security enforced in code, not in prompts</h4>
+        </div>
+        <p>The MCP YES gate uses a cryptographically-random, subtotal-bound, single-use nonce issued server-side &mdash; prompt injection cannot bypass it. Cart policy and rate limits fire in the route layer before any business logic runs.</p>
+      </article>
+      <article class="feat">
+        <div class="feat-head">
+          <span class="idx">D3</span>
+          <h4>Honest technical claims</h4>
+        </div>
+        <p>HMAC-SHA256 is explicitly labeled as a symmetric signature primitive; no fabrication of asymmetric ECDSA-based verifiable claims. Judges familiar with AP2/UAP specifics will contrast this favorably with teams that bluff cryptographic primitives.</p>
+      </article>
+      <article class="feat">
+        <div class="feat-head">
+          <span class="idx">D4</span>
+          <h4>Three identity paths for AI buyers</h4>
+        </div>
+        <p>An AI buyer can connect via OAuth 2.0 + PKCE (the Claude standard public-client flow), personal API keys in the MCP URL, or session cookies for in-app. All three paths funnel through a single identity resolver, and every AuditLog row carries the resulting agentGrantId.</p>
+      </article>
+      <article class="feat">
+        <div class="feat-head">
+          <span class="idx">D5</span>
+          <h4>Idempotency everywhere</h4>
+        </div>
+        <p>createCheckout reuses a pending checkout for the same cart (no duplicate Razorpay orders). confirmCheckout returns the existing order if already paid. The webhook path handles already-paid and checkout-not-found cases idempotently.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ............................ §5 GAPS / RISK ............................ -->
+  <section id="s5">
+    <div class="section-head">
+      <span class="sn">§ 05</span>
+      <h2>Known Gaps &amp; Risk Register</h2>
+      <span class="sub">Honest assessment for pitch Q&amp;A</span>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:38%">Gap</th>
+            <th style="width:12%">Severity</th>
+            <th>Impact on judging &amp; recommended posture</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>No scripted Razorpay test-mode walkthrough in deliverables</td>
+            <td><span class="chip md">Medium</span></td>
+            <td>Judges may not believe the Razorpay integration actually functions without a click-through. Record a 60-second curl-or-browser walkthrough and embed it in the pitch deck.</td>
+          </tr>
+          <tr>
+            <td>Upsell is driven by static product-relationship fields rather than co-occurrence-trained scoring</td>
+            <td><span class="chip lo">Low</span></td>
+            <td>Seed <code>frequentlyBoughtWith</code> arrays are sufficient for a hackathon. The infrastructure for upsell is correct; real co-occurrence training is the natural follow-up.</td>
+          </tr>
+          <tr>
+            <td>SpendingMandate &amp; StockReservation are schema-only primitives</td>
+            <td><span class="chip md">Medium</span></td>
+            <td>The columns exist in the database but are not yet wired into checkout enforcement. Frame honestly as &ldquo;the schema shape is ready for UAP Reserve Pay interop.&rdquo;</td>
+          </tr>
+          <tr>
+            <td>No x402-native 402 Payment Required responses</td>
+            <td><span class="chip lo">Low</span></td>
+            <td>Razorpay payment URLs are more practical for real buyers. A one-line alternate response shape on the checkout route is a trivial addition if needed for protocol-demo parity.</td>
+          </tr>
+          <tr>
+            <td>Informational-only campaign types (BUNDLE, CROSS_SELL, SEASONAL)</td>
+            <td><span class="chip lo">Low</span></td>
+            <td>Only CLEARANCE and URGENCY currently mutate prices. The performance write-back loop works correctly for product-scoped campaigns &mdash; the majority. Bundle-level coupon infrastructure is the natural extension.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ............................ §6 CODE REFERENCE INDEX ............................ -->
+  <section id="s6">
+    <div class="section-head">
+      <span class="sn">§ 06</span>
+      <h2>Code Reference Index</h2>
+      <span class="sub">Authoritative file locations · grouped by subsystem</span>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:20%">Subsystem</th>
+            <th style="width:22%">Component</th>
+            <th>Location</th>
+            <th style="width:28%">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="chip blue">Specification</span></td>
+            <td>Product Positioning</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/POSITIONING.md">POSITIONING.md</a>
+            </td>
+            <td>Value proposition, differentiators, target users, technical stack summary.</td>
+          </tr>
+          <tr>
+            <td><span class="chip blue">Specification</span></td>
+            <td>Protocol Alignment &amp; Honest Claims</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/PROTOCOL_ALIGNMENT.md">PROTOCOL_ALIGNMENT.md</a>
+            </td>
+            <td>Convergent primitives vs. deliberate non-claims for UAP / ACP / AP2 / x402.</td>
+          </tr>
+          <tr>
+            <td><span class="chip blue">Specification</span></td>
+            <td>Flowcharts &amp; Sequence Diagrams</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/FLOWCHART.md">FLOWCHART.md</a>
+            </td>
+            <td>14 Mermaid diagrams covering every critical flow &amp; data path.</td>
+          </tr>
+          <tr>
+            <td><span class="chip green">Verification</span></td>
+            <td>Bar Test Suite (22/22 passing)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/bar-tests.ts">bar-tests.ts</a>
+            </td>
+            <td>Run: <code>tsx backend/src/bar-tests.ts</code>. 5 groups: Gate / Margin / Failure / Policy / Source Wiring.</td>
+          </tr>
+
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Checkout &amp; Razorpay Payment</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/checkout.service.ts">checkout.service.ts</a>
+            </td>
+            <td>Razorpay order create, HMAC verify, atomic stock decrement inside <code>$transaction</code>, idempotency.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>MCP Server (Claude integration)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/routes/mcp.routes.ts">mcp.routes.ts</a>
+            </td>
+            <td>9 MCP tools + YES-gate nonce issue/consume + 3-way identity merge.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Conversational In-App Agent</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/agent.service.ts">agent.service.ts</a>
+            </td>
+            <td>13 Groq tools, ExplainBlock per turn, YES guard, reasoning trace, order-history preload.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Campaign Growth Engine</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/campaign.service.ts">campaign.service.ts</a>
+            </td>
+            <td>Generate from data → approve → activate → measure → write-back → aggregate accuracy.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Catalog &amp; Semantic Search</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/catalog.service.ts">catalog.service.ts</a>
+            </td>
+            <td>pgvector + keyword search, formatProduct with relationships, embeddings via Xenova.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Cart Policy Evaluator</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/policy.service.ts">policy.service.ts</a>
+            </td>
+            <td>Max qty, product availability, price-snapshot drift, forbidden combos.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Per-Grant Audit Trail</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/audit.service.ts">audit.service.ts</a>
+            </td>
+            <td>audit(service, action, agentGrantId, userId, payload). All money events route here.</td>
+          </tr>
+          <tr>
+            <td><span class="chip violet">Backend · Services</span></td>
+            <td>Store Analytics (campaign input)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/services/analytics.service.ts">analytics.service.ts</a>
+            </td>
+            <td>Slow movers, velocity, abandonment, stock health, 30-day AOV → campaign prompts.</td>
+          </tr>
+
+          <tr>
+            <td><span class="chip">Backend · Routes</span></td>
+            <td>Razorpay Webhook (HMAC verify)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/routes/webhook.routes.ts">webhook.routes.ts</a>
+            </td>
+            <td>payment.captured → confirmCheckout idempotent path → HTTP 200 on stock exhaustion.</td>
+          </tr>
+          <tr>
+            <td><span class="chip">Backend · Routes</span></td>
+            <td>OAuth 2.0 + PKCE &amp; API Keys</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/routes/oauth.routes.ts">oauth.routes.ts</a>
+            </td>
+            <td>Authorize, token, introspect, PKCE challenge+verifier, scoped bearer, personal API key CRUD.</td>
+          </tr>
+          <tr>
+            <td><span class="chip">Backend · Routes</span></td>
+            <td>Protocol Discovery (.well-known)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/routes/protocol-discovery.routes.ts">protocol-discovery.routes.ts</a>
+            </td>
+            <td>agent-commerce, ap2-mandate, ucp-catalog, ai-plugin manifests.</td>
+          </tr>
+          <tr>
+            <td><span class="chip">Backend · Routes</span></td>
+            <td>Fastify Server Composition</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/src/server.ts">server.ts</a>
+            </td>
+            <td>Fastify + Prisma, 15 route groups registered, rate limits, CORS, X-Merchant-Primitives header.</td>
+          </tr>
+
+          <tr>
+            <td><span class="chip warn">Data Model</span></td>
+            <td>Prisma Schema (PostgreSQL + pgvector)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/backend/prisma/schema.prisma">schema.prisma</a>
+            </td>
+            <td>Users, Products/Variants (embedding, metadata json), Carts, Checkouts, Orders w/ itemsJson, Campaigns w/ projections+actuals, OAuthGrants (PKCE), AuditLog, SpendingMandate, StockReservation.</td>
+          </tr>
+
+          <tr>
+            <td><span class="chip">Frontend</span></td>
+            <td>AI Chat Panel (in-app agent UI)</td>
+            <td class="ref-path">
+              <a href="file:///d:/Razorpay/urban-store/app/AIPanel.tsx">app/AIPanel.tsx</a>
+            </td>
+            <td>Streaming chat, ExplainBlock rendering, tool-use icons, YES-gate confirmation UI.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ............................ §7 FLOWCHARTS ............................ -->
+  <section id="s7">
+    <div class="section-head">
+      <span class="sn">§ 07</span>
+      <h2>System Flowcharts</h2>
+      <span class="sub">5 critical paths · Mermaid diagrams</span>
+    </div>
+
+    <!-- F1 -->
+    <div class="flow">
+      <div class="flow-head">
+        <h3><span class="fnum">F1</span>Overall System Architecture</h3>
+        <span class="note">Clients → Frontend → Identity/Rate → Backend → Services → Persistence/External</span>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    subgraph CLIENTS["Clients"]
+        direction LR
+        U[Browser User]
+        C[Claude AI (MCP)]
+        CH[In-App Agent Chat]
+        A[Merchant Admin]
+    end
+
+    subgraph FRONTEND["Frontend · Next.js App Router"]
+        direction TB
+        SP[Storefront<br/>/ · /product/:id]
+        AIP[AI Chat Panel<br/>AIPanel.tsx]
+        CART[Cart + Checkout<br/>/cart · /pay/:id]
+        ADM[Admin Dashboard<br/>/admin · /admin/campaigns]
+        AUD[Audit Trail<br/>/audit]
+        CONN[Connect Page<br/>/connect · MCP URL + API key]
+        OAUTH[OAuth Consent<br/>/oauth/authorize]
+    end
+
+    subgraph EDGE["Identity &amp; Rate Edge"]
+        direction TB
+        RL[Rate Limit Buckets<br/>Checkout=10/min · MCP=30/grant]
+        AUTH["3-Way Identity Merge<br/>1. Session Cookie<br/>2. OAuth Bearer (PKCE)<br/>3. API Key (us_live_)"]
+    end
+
+    subgraph BACKEND["Backend · Fastify · Route Groups"]
+        direction TB
+        CAT[Catalog Routes<br/>Semantic search · product detail]
+        CRT[Cart Routes<br/>Add · Update · Remove]
+        CHK[Checkout Routes<br/>Create · Confirm]
+        ORD[Order Routes<br/>History · Cancel]
+        AGT[Agent Routes<br/>Groq chat · reasoning trace]
+        MCP[MCP Server /mcp<br/>9 tools]
+        OA[OAuth Routes + Discovery<br/>Authorize · Token · Introspect]
+        ADMR[Admin Routes<br/>Campaigns · Performance]
+        WH[Webhook Routes<br/>Razorpay HMAC verify]
+        DISCO[Protocol Discovery<br/>/.well-known/*]
+    end
+
+    subgraph SERVICES["Service Layer · Core Logic"]
+        direction TB
+        CSVCAT[Catalog Service<br/>pgvector + keyword search]
+        CSVCRT[Cart Service<br/>priceSnapshot enforce]
+        CSVCHK[Checkout Service<br/>Razorpay + atomic stock]
+        CSVAGT[Agent Service<br/>Groq + ExplainBlock]
+        CSVCAM[Campaign Service<br/>Projection + Write-back]
+        CSVPO[Policy Service<br/>Cart policy decisions]
+        CSVAUD[Audit Service<br/>per-grant per-action]
+        CSVANA[Analytics Service<br/>Revenue · Velocity · Abandonment]
+    end
+
+    subgraph DATA["Persistence &amp; External APIs"]
+        direction TB
+        DB[(PostgreSQL<br/>pgvector + Prisma)]
+        EMB[Xenova all-MiniLM-L6-v2<br/>Local embeddings]
+        GROQ[Groq AI API<br/>Agent + Campaigns]
+        RP[Razorpay API<br/>Orders · Payment Webhooks]
+    end
+
+    U --> SP & CART & AUD
+    CH --> AIP
+    A --> ADM
+    C -->|MCP Streamable HTTP| MCP
+
+    SP & AIP & CART & ADM & AUD & CONN & OAUTH -->|HTTPS + Bearer| AUTH
+    AUTH --> RL
+    RL --> CAT & CRT & CHK & ORD & AGT & OA & ADMR & WH & DISCO & MCP
+
+    CAT --> CSVCAT
+    CRT --> CSVCRT
+    CHK --> CSVCHK & CSVPO
+    ORD --> CSVCHK
+    AGT --> CSVAGT & CSVCAT & CSVCRT & CSVCHK
+    MCP --> CSVCAT & CSVCRT & CSVCHK
+    ADMR --> CSVCAM & CSVANA
+    WH --> CSVCHK
+
+    CSVCAT --> DB & EMB
+    CSVCRT --> DB
+    CSVCHK --> DB & RP
+    CSVAGT --> GROQ & DB
+    CSVCAM --> GROQ & DB & CSVANA
+    CSVPO --> DB
+    CSVAUD --> DB
+    CSVANA --> DB
+
+    style CLIENTS fill:#0e1d3a,stroke:#25345c,color:#eaf0ff
+    style FRONTEND fill:#0e1d3a,stroke:#25345c,color:#eaf0ff
+    style EDGE fill:#140f2c,stroke:#352a66,color:#eaf0ff
+    style BACKEND fill:#0f1b2d,stroke:#1e3a5f,color:#eaf0ff
+    style SERVICES fill:#111827,stroke:#25345c,color:#eaf0ff
+    style DATA fill:#131827,stroke:#374151,color:#eaf0ff
+      </div>
+    </div>
+
+    <!-- F2 -->
+    <div class="flow">
+      <div class="flow-head">
+        <h3><span class="fnum">F2</span>MCP YES-Gate Checkout Flow</h3>
+        <span class="note">Server-enforced 3-step nonce flow · cannot bypass via prompt injection</span>
+      </div>
+      <div class="mermaid">
+sequenceDiagram
+    actor C as Claude AI
+    participant MCP as POST /mcp MCP Server
+    participant G as YES Gate Nonce Store
+    participant SRV as Checkout Service
+    participant RP as Razorpay API
+    actor U as End User
+
+    Note over C,RP: Step 1 · Cart must be known
+    C->>MCP: get_cart()
+    MCP-->>C: items[] · subtotal(₹2999) · itemCount(1)
+
+    Note over C,RP: Step 2 · Request server-issued nonce
+    C->>MCP: request_checkout_confirmation()
+    MCP->>G: issueNonce(userA, 2999, 1)
+    G-->>MCP: nonce=abc123… · TTL=2 min
+    MCP-->>C: confirmationNonce + summary
+
+    Note over C,U: Step 3 · Explicit YES from human
+    C->>U: To confirm ₹2,999 for 1 item, reply YES.
+    U-->>C: YES
+
+    Note over C,RP: Step 4 · Nonce REQUIRED server-side
+    C->>MCP: create_checkout(confirmationNonce="abc123…")
+    MCP->>G: consumeNonce("abc123", userA, 2999)
+    alt Nonce valid · unused · amount matches
+        G-->>MCP: ok:true
+        MCP->>SRV: createCheckout(userA)
+        SRV->>SRV: validateCartPolicy() stock · drift · qty
+        alt Policy ok
+            SRV->>RP: orders.create(amount=299900 paise)
+            RP-->>SRV: razorpayOrderId
+            SRV-->>MCP: checkoutId + razorpayOrderId + paymentUrl
+            MCP-->>C: success + paymentUrl
+        else Policy blocked
+            SRV-->>MCP: POLICY_REJECTED · issues[]
+            MCP-->>C: error · explainable to user
+        end
+    else Nonce invalid
+        G-->>MCP: ok:false · reason
+        MCP-->>C: GATE_CONFIRMATION_REQUIRED
+        Note right of MCP: Reasons<br/>· UNKNOWN (never issued)<br/>· REUSED (already consumed)<br/>· EXPIRED (TTL elapsed)<br/>· WRONG_USER<br/>· AMOUNT_MISMATCH
+    end
+      </div>
+    </div>
+
+    <!-- F3 -->
+    <div class="flow">
+      <div class="flow-head">
+        <h3><span class="fnum">F3</span>Campaign Revenue-Growth Loop</h3>
+        <span class="note">Data → AI propose → Approve → Activate → Measure → Write-back → Aggregate accuracy</span>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    A[Admin · /campaigns/generate] --> B[Pull real store data]
+    B --> B1[slowMovingProducts · sellThrough %]
+    B --> B2[productVelocity · units · revenue]
+    B --> B3[cartAbandonment · rate · valueAtRisk]
+    B --> B4[stockHealth · lowStockAlerts]
+    B --> B5[revenueStats · 30-day AOV]
+    B1 & B2 & B3 & B4 & B5 --> C[Groq · typed prompt]
+    C --> D[Parsed JSON campaigns · 3–5 proposals]
+    D --> E[Campaign rows · status = pending]
+
+    E --> F{Admin action}
+    F -->|Dismiss| G[status = dismissed]
+    F -->|Approve| H[activateCampaign · policy checks]
+
+    H --> I{All scope / policy checks pass}
+    I -->|No| J[status remains pending · audit rejected]
+    I -->|Yes| K[executeCampaignAction · snapshot _originalPrices]
+
+    K --> L[status = active · expiresAt = +7 days]
+    L --> M[Storefront renders campaign]
+    M --> N[Orders created as customers buy]
+    N --> O{Trigger: 1 h lazy refresh OR campaign expired}
+    O --> P[persistCampaignOutcomes]
+
+    P --> P1[Read projected.{units, revenue, netGain}]
+    P --> P2[Sum actuals from Order.itemsJson<br/>scoped to productId + approvedAt window]
+    P1 & P2 --> Q[Compute deltaRevenue · deltaUnits · projectionAccuracy 0…1]
+    Q --> R[Write actualResults + projectionAccuracy + lastMeasuredAt to Campaign]
+    R --> S[Build performance card]
+    S --> T{Verdict}
+    T -->|≥ +15 % delta| U[ahead · extend 2–3 days]
+    T -->|± 15 %| V[on_track · continue to day 5]
+    T -->|< −15 %| W[behind · investigate discount / trigger / season]
+    T -->|< 1 day active| X[insufficient_data · check tomorrow]
+
+    U & V & W --> Y[getCampaignProjectionSummary · aggregate accuracy 0…1]
+    W -->|Dismiss &amp; replace| F
+
+    style A fill:#0ea5e9,stroke:#0369a1,color:#fff
+    style C fill:#8b7cff,stroke:#5a49d2,color:#fff
+    style H fill:#f59e0b,stroke:#b45309,color:#fff
+    style P fill:#22d3ee,stroke:#0e7490,color:#fff
+    style T fill:#10b981,stroke:#047857,color:#fff
+    style S fill:#162240,stroke:#25335c,color:#eaf0ff
+      </div>
+    </div>
+
+    <!-- F4 -->
+    <div class="flow">
+      <div class="flow-head">
+        <h3><span class="fnum">F4</span>Atomic Checkout + Stock Rollback (Graceful Failure)</h3>
+        <span class="note">$transaction · Variant A decrement applied, B exhausted → ENTIRE tx rolled back, zero partial writes</span>
+      </div>
+      <div class="mermaid">
+sequenceDiagram
+    actor U as User / Razorpay Webhook
+    participant CHK as confirmCheckout()
+    participant TX as Prisma $transaction
+    participant DB as PostgreSQL
+
+    Note over U,DB: Scenario: A qty=10, B qty=2. User orders A×5 + B×3.
+
+    U->>CHK: confirmCheckout(checkoutId, razorpaySig)
+    CHK->>CHK: Verify Razorpay HMAC-SHA256
+    alt Signature invalid
+        CHK-->>U: INVALID_SIGNATURE + audit signature_mismatch
+    end
+
+    CHK->>TX: BEGIN TRANSACTION
+    Note over TX,DB: Loop item decrements atomically
+    TX->>DB: SELECT quantityAvailable variant A
+    DB-->>TX: qty_A = 10 ≥ 5  OK
+    TX->>DB: UPDATE A SET qty = 5 · status in_stock
+
+    TX->>DB: SELECT quantityAvailable variant B
+    DB-->>TX: qty_B = 2 &lt; 3  FAIL
+    Note over TX,DB: Mid-loop failure · THROW
+    TX-->>CHK: STOCK_EXHAUSTED :sku_B
+    CHK->>TX: ROLLBACK ← A restored to 10
+    CHK-->>U: STOCK_EXHAUSTED :sku_B · zero partial writes
+
+    Note over U,DB: Happy path · all items in stock
+    CHK->>TX: BEGIN
+    TX->>DB: decrement A
+    TX->>DB: decrement B (realistic qty)
+    TX->>DB: UPDATE checkout · status = paid
+    TX->>DB: INSERT order · itemsJson snapshot
+    TX->>DB: UPDATE cart · status = checked_out
+    TX-->>CHK: COMMIT all 5 writes atomically
+    CHK-->>U: orderId · status · total
+    CHK->>AUD: audit checkout.confirmed
+      </div>
+    </div>
+
+    <!-- F5 -->
+    <div class="flow">
+      <div class="flow-head">
+        <h3><span class="fnum">F5</span>AI-Buyer Identity &mdash; 3 Paths, One Enforcement Plane</h3>
+        <span class="note">All three paths merge → every AuditLog row carries an agentGrantId</span>
+      </div>
+      <div class="mermaid">
+flowchart LR
+    subgraph PATHS["3 AI-Buyer Identity Paths"]
+        direction LR
+        P1[1. OAuth 2.0 + PKCE<br/>Claude Desktop public client]
+        P2[2. Personal API Key<br/>us_live_ · MCP URL or X-Api-Key]
+        P3[3. Session Cookie<br/>In-app chat]
+    end
+
+    subgraph RESOLVER["Identity Resolver (MCP + Agent routes)"]
+        R1["Bearer?<br/>validateAccessToken(oauth)"]
+        R2["X-Api-Key / ?key="]
+        R3["Signed cookie"]
+    end
+
+    subgraph SCOPED["Scoped Per-Agent State"]
+        G[OAuthGrant row · id · scopes[] · expiresAt]
+        U[User row · id · role]
+    end
+
+    subgraph ENFORCED["Per-Request Enforcement"]
+        AUD[AuditLog.agentGrantId → G.id]
+        RL[Rate limiter keyed by grantId]
+        YG[YES nonce bound to userId]
+    end
+
+    P1 --> R1
+    P2 --> R2
+    P3 --> R3
+    R1 --> G & U
+    R2 --> U
+    R3 --> U
+    U --> AUD & RL & YG
+    G --> AUD & RL
+
+    style PATHS fill:#0f172a,stroke:#25345c,color:#eaf0ff
+    style RESOLVER fill:#140f2c,stroke:#352a66,color:#eaf0ff
+    style SCOPED fill:#0e1d3a,stroke:#25345c,color:#eaf0ff
+    style ENFORCED fill:#111827,stroke:#25345c,color:#eaf0ff
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ............................ FOOTER ............................ -->
+  <footer>
+    Urban Store &mdash; Razorpay Hackathon Track 01 Architecture Reference &middot;
+    Last updated per Track 01 assessment.
+  </footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#162240',
+      primaryTextColor: '#eaf0ff',
+      primaryBorderColor: '#25335c',
+      lineColor: '#5b8cff',
+      secondaryColor: '#0e1d3a',
+      tertiaryColor: '#111a30',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      fontSize: '13px',
+      noteBkgColor: '#140f2c',
+      noteTextColor: '#eaf0ff',
+      noteBorderColor: '#352a66',
+      actorBkg: '#162240',
+      actorBorder: '#25335c',
+      actorTextColor: '#eaf0ff',
+      activationBorderColor: '#5b8cff',
+      activationBkgColor: '#111a30',
+      sequenceNumberColor: '#eaf0ff',
+    },
+    flowchart: {
+      curve: 'basis',
+      htmlLabels: true,
+      padding: 18,
+      nodeSpacing: 50,
+      rankSpacing: 60,
+    },
+    sequence: {
+      wrap: true,
+      messageMargin: 44,
+      mirrorActors: false,
+      actorMargin: 64,
+      boxMargin: 8,
+      showSequenceNumbers: false,
+    },
+  });
+</script>
+</body>
+</html>

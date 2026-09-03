@@ -1,4 +1,5 @@
 import { prisma } from "../db/prisma.js";
+import { embed, buildProductText, EMBEDDING_DIM } from "./embedding.service.js";
 
 export interface SearchParams {
   query?: string;
@@ -101,6 +102,115 @@ export function formatProduct(product: any) {
   };
 }
 
+// ─── Detect natural-language queries vs. keyword queries ─────────────────────
+// A query is "semantic" if it contains stop words, prepositions, or intent
+// phrases that keyword matching can't handle well.
+
+const SEMANTIC_TRIGGERS = [
+  /\b(for|with|under|above|around|about|something|looking|need|want|find|gift|cozy|casual|cool|warm|minimal|modern|classic|premium|best|good|nice|perfect|ideal|suitable|everyday|office|outdoor|travel|gym|college|wedding|party|work|light|heavy|durable|stylish|trendy|affordable|budget|cheap|expensive|luxury)\b/i,
+  /\d+\s*(k|thousand|rs|rupee|₹)/i,   // budget expressions
+  /\bunder\s*₹/i,
+];
+
+function isSemanticQuery(query: string): boolean {
+  return SEMANTIC_TRIGGERS.some((r) => r.test(query));
+}
+
+// ─── Vector / semantic search ─────────────────────────────────────────────────
+
+async function vectorSearch(params: SearchParams) {
+  const {
+    query, category, subcategory,
+    minPrice, maxPrice, availability,
+    limit = 10, offset = 0,
+  } = params;
+
+  // Embed the query
+  let queryVec: number[];
+  try {
+    const text = buildProductText({
+      name: query ?? "",
+      brand: "",
+      description: query ?? "",
+      categoryName: category ?? "",
+      subcategoryName: subcategory ?? "",
+      useCases: [],
+      suitableFor: [],
+      notSuitableFor: [],
+      characteristics: {},
+    });
+    queryVec = await embed(text);
+  } catch {
+    // Embedding model not loaded yet — fall back to keyword
+    return null;
+  }
+
+  // Build optional WHERE clauses for structured filters
+  const conditions: string[] = ["p.embedding IS NOT NULL"];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sqlParams: any[] = [`[${queryVec.join(",")}]::vector(${EMBEDDING_DIM})`];
+  let paramIdx = 2;
+
+  if (category) {
+    conditions.push(`LOWER(p."categoryId") = LOWER($${paramIdx++})`);
+    sqlParams.push(category);
+  }
+  if (subcategory) {
+    conditions.push(`LOWER(p."subcategoryId") = LOWER($${paramIdx++})`);
+    sqlParams.push(subcategory);
+  }
+  if (minPrice !== undefined) {
+    conditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv."productId" = p.id AND pv."priceAmount" >= $${paramIdx++})`);
+    sqlParams.push(minPrice);
+  }
+  if (maxPrice !== undefined) {
+    conditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv."productId" = p.id AND pv."priceAmount" <= $${paramIdx++})`);
+    sqlParams.push(maxPrice);
+  }
+  if (availability) {
+    conditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv."productId" = p.id AND pv."availabilityStatus" = $${paramIdx++})`);
+    sqlParams.push(availability);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Cosine similarity via pgvector <=> operator (lower = more similar)
+  const sql = `
+    SELECT p.id, 1 - (p.embedding <=> $1) AS score
+    FROM products p
+    ${whereClause}
+    ORDER BY p.embedding <=> $1
+    LIMIT ${limit + offset}
+  `;
+
+  let rows: { id: string; score: number }[];
+  try {
+    rows = await prisma.$queryRawUnsafe<{ id: string; score: number }[]>(sql, ...sqlParams);
+  } catch {
+    // pgvector not installed or embedding column missing — fall back to keyword
+    return null;
+  }
+
+  const sliced = rows.slice(offset, offset + limit);
+  if (sliced.length === 0) return { products: [], total: 0 };
+
+  const ids = sliced.map((r) => r.id);
+  const scoreMap = new Map(sliced.map((r) => [r.id, r.score]));
+
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids } },
+    include: { variants: true },
+  });
+
+  // Re-order by similarity score
+  products.sort((a, b) => (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0));
+
+  // Count total matching — use keyword count as approximation when no filters
+  const total = rows.length;
+
+  return { products: products.map(formatProduct), total };
+}
+
 // ─── Keyword search ───────────────────────────────────────────────────────────
 
 async function keywordSearch(params: SearchParams) {
@@ -149,18 +259,34 @@ async function keywordSearch(params: SearchParams) {
   return { products: products.map(formatProduct), total };
 }
 
-// ─── Main search ──────────────────────────────────────────────────────────────
+// ─── Main search — semantic first, keyword fallback ──────────────────────────
 
 export async function searchProducts(params: SearchParams) {
   const limit = params.limit ?? 10;
   const offset = params.offset ?? 0;
+
+  // Use semantic search when:
+  //   - A natural-language query is present AND
+  //   - Embeddings are likely stored (detected by trigger words)
+  if (params.query && isSemanticQuery(params.query)) {
+    const semantic = await vectorSearch({ ...params, limit, offset });
+    if (semantic && semantic.products.length > 0) {
+      return {
+        ...semantic,
+        limit,
+        offset,
+        searchMode: "semantic" as const,
+      };
+    }
+    // Fall through to keyword if semantic returned nothing or failed
+  }
 
   const result = await keywordSearch({ ...params, limit, offset });
   return {
     ...result,
     limit,
     offset,
-    searchMode: "keyword",
+    searchMode: "keyword" as const,
   };
 }
 

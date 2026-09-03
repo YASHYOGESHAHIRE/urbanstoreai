@@ -14,6 +14,7 @@ import { adminRoutes } from "./routes/admin.routes.js";
 import { behaviourRoutes } from "./routes/behaviour.routes.js";
 import { mcpRoutes } from "./routes/mcp.routes.js";
 import { webhookRoutes } from "./routes/webhook.routes.js";
+import { protocolDiscoveryRoutes } from "./routes/protocol-discovery.routes.js";
 import { prisma } from "./db/prisma.js";
 import { expireOverdueCampaigns } from "./services/campaign.service.js";
 
@@ -38,6 +39,15 @@ const app = Fastify({
 
 async function bootstrap() {
   app.decorate("prisma", prisma);
+
+  app.addHook("onSend", async (_request, reply, _payload) => {
+    if (!reply.hasHeader("X-Merchant-Primitives")) {
+      reply.header(
+        "X-Merchant-Primitives",
+        "scoped-oauth; server-side-yes-gate; audit-per-grant; hmac-payment-verify; atomic-stock; price-snapshot; margin-floor"
+      );
+    }
+  });
 
   // Allow empty JSON bodies — needed for POST /api/v1/checkout and similar
   app.addContentTypeParser(
@@ -85,34 +95,93 @@ async function bootstrap() {
   await app.register(async (limitedApp) => {
     await limitedApp.register(fastifyRateLimit, {
       max: 20,
-      timeWindow: "1 minute",
-      errorResponseBuilder() {
-        return { error: "RATE_LIMIT_EXCEEDED" };
+      timeWindow: 60_000,
+      keyGenerator: (req) => `ip:${req.ip}`,
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
     await limitedApp.register(authRoutes);
     await limitedApp.register(oauthRoutes);
   });
 
-  // ── Catalog (public) ─────────────────────────────────────────────────────────
-  await app.register(catalogRoutes);
+  await protocolDiscoveryRoutes(app);
 
-  // ── Cart ─────────────────────────────────────────────────────────────────────
-  await app.register(cartRoutes);
+  // ── Catalog (public) — 120/min per IP ────────────────────────────────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 120,
+      timeWindow: 60_000,
+      keyGenerator: (req) => `ip:${req.ip}`,
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(catalogRoutes);
+  });
 
-  // ── Checkout ─────────────────────────────────────────────────────────────────
-  await app.register(checkoutRoutes);
+  // ── Cart — 60/min IP + 30/min USER (key=user if present else ip, max=30) ────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 30,
+      timeWindow: 60_000,
+      keyGenerator: (req) => {
+        const userId = (req as any).user?.id;
+        return userId ? `u:${userId}` : `ip:${req.ip}`;
+      },
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(cartRoutes);
+  });
 
-  // ── Orders ───────────────────────────────────────────────────────────────────
-  await app.register(orderRoutes);
+  // ── Checkout — 20/min IP + 10/min USER (strictest, money action) ─────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 10,
+      timeWindow: 60_000,
+      keyGenerator: (req) => {
+        const userId = (req as any).user?.id;
+        return userId ? `u:${userId}` : `ip:${req.ip}`;
+      },
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(checkoutRoutes);
+  });
 
-  // ── Agent (rate limited) ──────────────────────────────────────────────────────
+  // ── Orders — 60/min IP + 30/min USER ─────────────────────────────────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 30,
+      timeWindow: 60_000,
+      keyGenerator: (req) => {
+        const userId = (req as any).user?.id;
+        return userId ? `u:${userId}` : `ip:${req.ip}`;
+      },
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(orderRoutes);
+  });
+
+  // ── Agent (rate limited) — PRESERVED existing 30/min cap ─────────────────────
   await app.register(async (limitedApp) => {
     await limitedApp.register(fastifyRateLimit, {
       max: 30,
-      timeWindow: "1 minute",
-      errorResponseBuilder() {
-        return { error: "RATE_LIMIT_EXCEEDED" };
+      timeWindow: 60_000,
+      keyGenerator: (req) => `ip:${req.ip}`,
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
     });
     await limitedApp.register(agentRoutes);
@@ -121,12 +190,53 @@ async function bootstrap() {
   // ── OpenAPI spec (public) ──────────────────────────────────────────────────
   await app.register(openApiRoutes);
 
-  // ── Admin (protected) ─────────────────────────────────────────────────────
-  await app.register(adminRoutes);
+  // ── Admin — 60/min per USER (user required for admin) ─────────────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 60,
+      timeWindow: 60_000,
+      keyGenerator: (req) => {
+        const userId = (req as any).user?.id;
+        return userId ? `u:${userId}` : `ip:${req.ip}`;
+      },
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(adminRoutes);
+  });
 
-  // ── Behaviour tracking ────────────────────────────────────────────────────
-  await app.register(behaviourRoutes);
-  await app.register(mcpRoutes);
+  // ── Behaviour tracking — 120/min per IP ────────────────────────────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 120,
+      timeWindow: 60_000,
+      keyGenerator: (req) => `ip:${req.ip}`,
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(behaviourRoutes);
+  });
+
+  // ── MCP — 60/min IP + 30/min GRANT ID ──────────────────────────────────────
+  await app.register(async (scoped) => {
+    await scoped.register(fastifyRateLimit, {
+      max: 30,
+      timeWindow: 60_000,
+      keyGenerator: (req) => {
+        const grantId = (req as any).agent?.grantId;
+        return grantId ? `g:${grantId}` : `ip:${req.ip}`;
+      },
+      header: true,
+      errorResponseBuilder(_err, context) {
+        return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
+      },
+    });
+    await scoped.register(mcpRoutes);
+  });
 
   // ── Webhooks (raw body needed for HMAC verification) ──────────────────────
   await app.register(webhookRoutes);

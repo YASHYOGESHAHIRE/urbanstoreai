@@ -138,6 +138,23 @@ export default function ConnectPage() {
               </button>
             </div>
 
+            {/* One-click deep link — pre-fills Claude integration dialog */}
+            {mcpUrl && (
+              <a
+                href={`https://claude.ai/integrations/add?name=Urban+Store&url=${encodeURIComponent(mcpUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 w-full py-3 mb-4 bg-[#c8f04b] text-black text-[14px] font-black rounded-xl hover:bg-[#b8e03b] transition-colors"
+              >
+                <Zap size={16} fill="black" />
+                Open in Claude — pre-filled
+                <ExternalLink size={14} />
+              </a>
+            )}
+            <p className="text-gray-400 text-[11px] text-center mb-5 -mt-2">
+              Opens Claude with your MCP URL already filled in. Just click Add.
+            </p>
+
             {/* MCP URL — this is what goes into Claude */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">MCP Server URL</p>
@@ -182,14 +199,14 @@ export default function ConnectPage() {
         {/* Steps */}
         {!notLoggedIn && !loading && (
           <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-            <p className="text-gray-900 text-[13px] font-bold uppercase tracking-wider mb-5">How to connect</p>
+            <p className="text-gray-900 text-[13px] font-bold uppercase tracking-wider mb-5">How to connect — step by step</p>
 
             {/* Step 1 */}
             <div className="flex gap-4 mb-6">
               <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">1</div>
               <div className="flex-1">
                 <p className="text-gray-900 text-[14px] font-semibold mb-1">Copy your MCP URL above</p>
-                <p className="text-gray-400 text-[12px]">Click the <strong className="text-gray-600">Copy</strong> button next to your MCP URL. It includes your personal API key.</p>
+                <p className="text-gray-400 text-[12px]">Click the <strong className="text-gray-600">Copy</strong> button next to your MCP URL. It already contains your personal API key — no extra login needed.</p>
               </div>
             </div>
 
@@ -197,13 +214,61 @@ export default function ConnectPage() {
             <div className="flex gap-4 mb-6">
               <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">2</div>
               <div className="flex-1">
-                <p className="text-gray-900 text-[14px] font-semibold mb-1">Open Claude Integrations</p>
-                <p className="text-gray-400 text-[12px] mb-3">Go to claude.ai → Settings → Integrations → Add custom integration.</p>
-                <a href="https://claude.ai/settings/integrations" target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#c8f04b] text-black text-[13px] font-bold rounded-xl hover:bg-[#b8e03b] transition-colors">
-                  Open Claude Integrations
-                  <ExternalLink size={13} />
-                </a>
+                <p className="text-gray-900 text-[14px] font-semibold mb-2">Open Claude — use the button above or do it manually</p>
+                <div className="bg-[#c8f04b]/10 border border-[#c8f04b]/30 rounded-xl p-3 mb-3">
+                  <p className="text-gray-800 text-[12px] font-semibold mb-1">⚡ Fastest way</p>
+                  <p className="text-gray-600 text-[12px]">Click <strong>&quot;Open in Claude — pre-filled&quot;</strong> above. Claude opens with your MCP URL already in the field. You just click Add.</p>
+                </div>
+                <p className="text-gray-400 text-[12px] mb-3">Or manually — Claude has two places where you can add a connector:</p>
+
+                {/* Path A */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-5 h-5 bg-black text-white rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">A</span>
+                    <p className="text-gray-900 text-[12px] font-bold">Direct route — Settings → Integrations</p>
+                  </div>
+                  <div className="space-y-1.5 pl-7">
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">Click your profile picture (top right) → <strong className="text-gray-700">Settings</strong></p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">Click <strong className="text-gray-700">Integrations</strong> in the left sidebar</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">Click <strong className="text-gray-700">Add Integration</strong> → then select <strong className="text-gray-700">Custom</strong></p>
+                    </div>
+                  </div>
+                  <a href="https://claude.ai/settings/integrations" target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-3 ml-7 px-3 py-1.5 bg-black text-white text-[11px] font-bold rounded-lg hover:bg-gray-800 transition-colors">
+                    Open Integrations
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
+
+                {/* Path B */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-5 h-5 bg-gray-600 text-white rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">B</span>
+                    <p className="text-gray-900 text-[12px] font-bold">Alternative — Customize → MCP Connectors</p>
+                  </div>
+                  <div className="space-y-1.5 pl-7">
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">In Claude&apos;s chat, click <strong className="text-gray-700">Customize</strong> (or the settings icon near the chat input)</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">Find the <strong className="text-gray-700">MCP Connectors</strong> section</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                      <p className="text-gray-500 text-[12px]">Click <strong className="text-gray-700">Add</strong> → then select <strong className="text-gray-700">Custom</strong></p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -211,30 +276,79 @@ export default function ConnectPage() {
             <div className="flex gap-4 mb-6">
               <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">3</div>
               <div className="flex-1">
-                <p className="text-gray-900 text-[14px] font-semibold mb-1">Paste the URL and configure</p>
-                <p className="text-gray-400 text-[12px] mb-3">Paste the MCP URL you copied. Then set:</p>
-                <div className="space-y-2">
+                <p className="text-gray-900 text-[14px] font-semibold mb-2">Paste the URL and set authentication to None</p>
+                <p className="text-gray-400 text-[12px] mb-3">In the &quot;Add custom integration&quot; dialog:</p>
+                <div className="space-y-2 mb-3">
                   {[
-                    { label: "Authentication", value: "None" },
-                    { label: "Transport", value: "Streamable HTTP" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5">
+                    { label: "Integration URL", value: "Paste your MCP URL here", highlight: true },
+                    { label: "Authentication", value: "Select → None" },
+                  ].map(({ label, value, highlight }) => (
+                    <div key={label} className={`flex items-center gap-3 rounded-xl px-4 py-2.5 border ${highlight ? "bg-[#c8f04b]/10 border-[#c8f04b]/40" : "bg-gray-50 border-gray-100"}`}>
                       <div className="w-1.5 h-1.5 rounded-full bg-black flex-shrink-0" />
-                      <span className="text-gray-500 text-[12px]">{label}:</span>
+                      <span className="text-gray-500 text-[12px] min-w-[120px]">{label}:</span>
                       <span className="text-gray-900 text-[12px] font-bold">{value}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-gray-400 text-[12px] mt-2">Then click <strong className="text-gray-700">Add</strong>.</p>
+                <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                  <p className="text-amber-700 text-[12px]">
+                    <strong>Why None?</strong> Your API key is already embedded in the URL — Claude doesn&apos;t need a separate OAuth login. This is the simplest and most reliable setup.
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Step 4 */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 mb-6">
               <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">4</div>
               <div className="flex-1">
-                <p className="text-gray-900 text-[14px] font-semibold mb-1">Done — no login popup needed</p>
-                <p className="text-gray-400 text-[12px]">Your API key is baked into the URL. Claude will start shopping immediately with no OAuth flow.</p>
+                <p className="text-gray-900 text-[14px] font-semibold mb-2">Click Connect → set approval to &quot;Always allow&quot;</p>
+                <p className="text-gray-400 text-[12px] mb-3">After adding the integration, Claude will show a connection prompt:</p>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-gray-500 text-[12px]">A popup appears saying <strong className="text-gray-700">&quot;Urban Store wants to connect&quot;</strong> — click <strong className="text-gray-700">Connect</strong></p>
+                  </div>
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-gray-500 text-[12px]">You&apos;ll see a dropdown for tool approval — open it and select <strong className="text-gray-700">Always allow</strong> (not &quot;Ask each time&quot;)</p>
+                  </div>
+                  <div className="flex items-start gap-2 bg-[#c8f04b]/10 border border-[#c8f04b]/30 rounded-xl px-4 py-3">
+                    <span className="text-[#888] text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-gray-600 text-[12px]"><strong>Always allow</strong> means Claude can search products and manage your cart without asking permission each time — checkout still requires your explicit <strong>YES</strong>.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="flex gap-4 mb-6">
+              <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">5</div>
+              <div className="flex-1">
+                <p className="text-gray-900 text-[14px] font-semibold mb-2">Close the settings window and start a new chat</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-gray-500 text-[12px]">Close Settings. Go back to Claude&apos;s main chat screen.</p>
+                  </div>
+                  <div className="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <span className="text-gray-400 text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-gray-500 text-[12px]">Start a <strong className="text-gray-700">new conversation</strong> (existing conversations may not load the connector automatically).</p>
+                  </div>
+                  <div className="flex items-start gap-2 bg-black rounded-xl px-4 py-3">
+                    <span className="text-[#c8f04b] text-[11px] font-mono flex-shrink-0 mt-0.5">→</span>
+                    <p className="text-white text-[12px]">Type: <strong className="text-[#c8f04b]">&quot;Search Urban Store for a laptop bag under ₹3,000&quot;</strong> — Claude will immediately search and show results.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Final check */}
+            <div className="flex gap-4">
+              <div className="w-7 h-7 bg-[#c8f04b] rounded-full flex items-center justify-center text-[12px] font-black flex-shrink-0 mt-0.5">✓</div>
+              <div className="flex-1">
+                <p className="text-gray-900 text-[14px] font-semibold mb-1">You&apos;re connected</p>
+                <p className="text-gray-400 text-[12px]">Claude can now browse products, add to cart, check your orders, and create a checkout — all from the chat. Checkout always asks for your <strong className="text-gray-700">YES</strong> before any payment is initiated.</p>
               </div>
             </div>
           </div>

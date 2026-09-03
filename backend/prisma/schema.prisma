@@ -11,19 +11,21 @@ datasource db {
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 model User {
-  id           String       @id @default(cuid())
-  name         String
-  email        String       @unique
-  passwordHash String
-  isAdmin      Boolean      @default(false)
-  apiKey       String?      @unique
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  sessions     Session[]
-  oauthGrants  OAuthGrant[]
-  carts        Cart[]
-  orders       Order[]
-  auditLogs    AuditLog[]
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  passwordHash    String
+  isAdmin         Boolean      @default(false)
+  isReadOnlyAdmin Boolean      @default(false)
+  apiKey          String?      @unique
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sessions        Session[]
+  oauthGrants     OAuthGrant[]
+  carts           Cart[]
+  orders          Order[]
+  auditLogs       AuditLog[]
+  spendingMandates SpendingMandate[]
 
   @@map("users")
 }
@@ -123,6 +125,7 @@ model Product {
   frequentlyBoughtWith  String[]
   requiresVariantSelect Boolean          @default(false)
   maxQtyPerOrder        Int              @default(5)
+  embedding             Unsupported("vector(384)")?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   variants              ProductVariant[]
@@ -148,6 +151,7 @@ model ProductVariant {
   createdAt          DateTime   @default(now())
   product            Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   cartItems          CartItem[]
+  stockReservations  StockReservation[]
 
   @@index([productId])
   @@index([availabilityStatus])
@@ -207,6 +211,7 @@ model Checkout {
   updatedAt        DateTime  @updatedAt
   cart             Cart      @relation(fields: [cartId], references: [id])
   order            Order?
+  stockReservations StockReservation[]
 
   @@index([userId])
   @@index([status])
@@ -254,24 +259,28 @@ model AuditLog {
 // ─── Campaign (merchant marketing decisions) ─────────────────────────────────
 
 model Campaign {
-  id             String    @id @default(cuid())
-  type           String                          // CLEARANCE | BUNDLE | URGENCY | SEASONAL | CROSS_SELL
-  status         String    @default("pending")   // pending | approved | dismissed | active | expired
-  productId      String?
-  title          String
-  trigger        String                          // human-readable trigger explanation
-  proposedAction Json                            // { discountPct, bundleWith, label, ... }
-  reasoning      Json                            // string[]
-  projections    Json                            // { currentRevenue, projectedRevenue, netGain, confidence }
-  risks          Json                            // string[]
-  priority       Int       @default(1)
-  approvedAt     DateTime?
-  expiresAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  type                String                          // CLEARANCE | BUNDLE | URGENCY | SEASONAL | CROSS_SELL
+  status              String    @default("pending")   // pending | approved | dismissed | active | expired
+  productId           String?
+  title               String
+  trigger             String                          // human-readable trigger explanation
+  proposedAction      Json                            // { discountPct, bundleWith, label, ... }
+  reasoning           Json                            // string[]
+  projections         Json                            // { currentRevenue, projectedRevenue, netGain, confidence }
+  actualResults       Json      @default("{}")        // WRITE-BACK: { unitsSold, revenue, baselineRevenue, deltaRevenue, deltaUnits, measuredAt }
+  projectionAccuracy  Float?                          // WRITE-BACK: 0..1 scalar (1 = projection dead-accurate; indexed for sort/filter)
+  risks               Json                            // string[]
+  priority            Int       @default(1)
+  approvedAt          DateTime?
+  expiresAt           DateTime?
+  lastMeasuredAt      DateTime?                       // WRITE-BACK: timestamp of most recent measurement (for lazy refresh TTL)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([status])
   @@index([type])
+  @@index([projectionAccuracy])
   @@map("campaigns")
 }
 
@@ -293,4 +302,70 @@ model UserBehaviour {
   @@index([productId])
   @@index([createdAt])
   @@map("user_behaviours")
+}
+
+// ─── Agent-to-agent commerce: Protocol-Level Enums ────────────────────────────
+
+enum SpendingMandateScope {
+  CATEGORY
+  SUB_CATEGORY
+  PRODUCT
+  ALL
+}
+
+enum SpendingMandateStatus {
+  ACTIVE
+  PAUSED
+  REVOKED
+  EXPIRED
+  EXHAUSTED
+}
+
+// ─── Stock Reservation (merchant-agent negotiation / UAP Reserve Pay) ─────────
+
+model StockReservation {
+  id          String    @id @default(cuid())
+  variantSku  String                              // FK to ProductVariant.sku (soft FK via index)
+  qty         Int
+  reservedAt  DateTime  @default(now())
+  expiresAt   DateTime
+  checkoutId  String?                             // set at confirmCheckout
+  reference   String?                             // mandate / counter-reference
+  consumedAt  DateTime?
+
+  checkout    Checkout? @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+  variant     ProductVariant @relation(fields: [variantSku], references: [sku], onDelete: Cascade)
+
+  @@index([variantSku])
+  @@index([expiresAt])
+  @@index([checkoutId])
+  @@index([reference])
+  @@map("stock_reservations")
+}
+
+// ─── Spending Mandate (UAP Reserve Pay — delegated agent spending blocks) ────
+
+model SpendingMandate {
+  id           String                @id @default(cuid())
+  userId       String
+  name         String
+  scope        SpendingMandateScope
+  scopeValue   String?                            // category id / subcat id / product id (nullable for ALL)
+  budgetTotal  Int                                // in paise
+  budgetUsed   Int                   @default(0)   // in paise
+  maxPerOrder  Int?                               // per-order cap in paise
+  startsAt     DateTime              @default(now())
+  expiresAt    DateTime
+  status       SpendingMandateStatus @default(ACTIVE)
+  revokedAt    DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([scope, scopeValue])
+  @@index([expiresAt])
+  @@map("spending_mandates")
 }

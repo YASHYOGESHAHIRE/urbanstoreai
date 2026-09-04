@@ -97,7 +97,6 @@ async function bootstrap() {
       max: 20,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -114,7 +113,6 @@ async function bootstrap() {
       max: 120,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -122,16 +120,16 @@ async function bootstrap() {
     await scoped.register(catalogRoutes);
   });
 
-  // ── Cart — 60/min IP + 30/min USER (key=user if present else ip, max=30) ────
+  // ── Cart — 30/min per user or IP ─────────────────────────────────────────────
   await app.register(async (scoped) => {
     await scoped.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
       keyGenerator: (req) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userId = (req as any).user?.id;
         return userId ? `u:${userId}` : `ip:${req.ip}`;
       },
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -139,16 +137,16 @@ async function bootstrap() {
     await scoped.register(cartRoutes);
   });
 
-  // ── Checkout — 20/min IP + 10/min USER (strictest, money action) ─────────────
+  // ── Checkout — 10/min per user (strictest, money action) ─────────────────────
   await app.register(async (scoped) => {
     await scoped.register(fastifyRateLimit, {
       max: 10,
       timeWindow: 60_000,
       keyGenerator: (req) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userId = (req as any).user?.id;
         return userId ? `u:${userId}` : `ip:${req.ip}`;
       },
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -156,16 +154,16 @@ async function bootstrap() {
     await scoped.register(checkoutRoutes);
   });
 
-  // ── Orders — 60/min IP + 30/min USER ─────────────────────────────────────────
+  // ── Orders — 30/min per user or IP ───────────────────────────────────────────
   await app.register(async (scoped) => {
     await scoped.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
       keyGenerator: (req) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userId = (req as any).user?.id;
         return userId ? `u:${userId}` : `ip:${req.ip}`;
       },
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -173,13 +171,12 @@ async function bootstrap() {
     await scoped.register(orderRoutes);
   });
 
-  // ── Agent (rate limited) — PRESERVED existing 30/min cap ─────────────────────
+  // ── Agent — 30/min per IP ─────────────────────────────────────────────────────
   await app.register(async (limitedApp) => {
     await limitedApp.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -190,16 +187,16 @@ async function bootstrap() {
   // ── OpenAPI spec (public) ──────────────────────────────────────────────────
   await app.register(openApiRoutes);
 
-  // ── Admin — 60/min per USER (user required for admin) ─────────────────────
+  // ── Admin — 60/min per user ────────────────────────────────────────────────
   await app.register(async (scoped) => {
     await scoped.register(fastifyRateLimit, {
       max: 60,
       timeWindow: 60_000,
       keyGenerator: (req) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userId = (req as any).user?.id;
         return userId ? `u:${userId}` : `ip:${req.ip}`;
       },
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -213,7 +210,6 @@ async function bootstrap() {
       max: 120,
       timeWindow: 60_000,
       keyGenerator: (req) => `ip:${req.ip}`,
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },
@@ -221,16 +217,16 @@ async function bootstrap() {
     await scoped.register(behaviourRoutes);
   });
 
-  // ── MCP — 60/min IP + 30/min GRANT ID ──────────────────────────────────────
+  // ── MCP — 30/min per grant or IP ───────────────────────────────────────────
   await app.register(async (scoped) => {
     await scoped.register(fastifyRateLimit, {
       max: 30,
       timeWindow: 60_000,
       keyGenerator: (req) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const grantId = (req as any).agent?.grantId;
         return grantId ? `g:${grantId}` : `ip:${req.ip}`;
       },
-      header: true,
       errorResponseBuilder(_err, context) {
         return { error: "RATE_LIMITED", retryAfterMs: context.ttl };
       },

@@ -1,8 +1,86 @@
 # Urban Store — AI-Native Merchant Infrastructure
 
 > **Razorpay Hackathon · Track 01 — AI Growth & Agentic Commerce**
->
-> Grow merchant revenue with a data-driven campaign orchestrator, *and* make merchants transactable end-to-end by AI buyers via MCP, OAuth&nbsp;2.0&nbsp;+&nbsp;PKCE, and Razorpay test-mode APIs.
+
+---
+
+## 🚀 For Hackathon Judges — Start Here
+
+**Live Demo:** [https://urbanstoreai-9c7p.vercel.app](https://urbanstoreai-9c7p.vercel.app)
+
+**Architecture Diagram:** [urban-ai-ecosystem.html](https://urbanstoreai-9c7p.vercel.app/urban-ai-ecosystem.html) · [Miro Board](https://miro.com/app/board/uXjVHr_Z15Q=/?share_link_id=593227543948)
+
+---
+
+### Feature 1 — Shop with the In-App AI Agent
+
+1. Open [https://urbanstoreai-9c7p.vercel.app](https://urbanstoreai-9c7p.vercel.app)
+2. The AI panel opens on the right automatically — try typing:
+   - *"Find me a laptop bag under ₹2,500"*
+   - *"Show me discounted running shoes"*
+   - *"Gift ideas under ₹1,000"*
+3. Click **Add to Cart** on any product card — agent auto-suggests complementary items (cross-sell)
+4. Type **"checkout"** → agent shows cart total and asks for confirmation
+5. Type **"yes"** → Razorpay payment modal opens
+6. Test card: `4111 1111 1111 1111` · any future date · any CVV
+
+---
+
+### Feature 2 — Admin Panel (Campaign Orchestrator)
+
+1. Click the user icon → **Sign In**
+2. Use the **🏆 Hackathon Judge** quick-fill button → click Sign In
+3. Navigate to [/admin](https://urbanstoreai-9c7p.vercel.app/admin) — see live revenue KPIs
+4. Go to [/admin/campaigns](https://urbanstoreai-9c7p.vercel.app/admin/campaigns) — see AI-generated campaign proposals with projections, reasoning, and risks
+5. Go to [/admin/users](https://urbanstoreai-9c7p.vercel.app/admin/users) — click any user to see their full audit trail
+
+> Judge account is **read-only** — can view everything, cannot generate or approve campaigns.
+
+---
+
+### Feature 3 — Audit Trail
+
+1. Open the AI panel and have a short conversation
+2. Click **View Audit Trail** at the bottom of the AI panel
+3. See every agent action — tool calls, cart events, policy checks, Razorpay events — in real time
+4. Switch between the **localStorage session** (live) and **DB session** (persistent, server-side)
+
+---
+
+### Feature 4 — Shop via Claude (External AI Buyer)
+
+1. Go to [/connect](https://urbanstoreai-9c7p.vercel.app/connect) — log in first
+2. Click **"Open in Claude — pre-filled"** — Claude opens with your MCP URL already filled in
+3. Set Authentication to **None** → click Add
+4. In a new Claude conversation, type:
+   - *"Search Urban Store for running shoes under ₹3,000 and add the best one to my cart"*
+   - *"Show me my Urban Store cart and create a checkout"*
+5. Say **YES** when Claude asks for confirmation → get the payment URL
+
+---
+
+### Feature 5 — Protocol Discovery
+
+Hit these endpoints directly in a browser to see the agent-commerce discovery layer:
+
+```
+https://urbanstoreai-backend.vercel.app/.well-known/agent-commerce
+https://urbanstoreai-backend.vercel.app/.well-known/ucp-catalog
+https://urbanstoreai-backend.vercel.app/health
+```
+
+---
+
+### Judge Credentials
+
+| Field | Value |
+|---|---|
+| Email | `judge@urbanstore.demo` |
+| Password | `Judge@2024` |
+| Role | Read-only Admin |
+| Access | Dashboard · Campaigns · Users · Audit trail |
+
+---
 
 ---
 

@@ -123,7 +123,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/api/v1/admin/campaigns/performance",
     { preHandler: [requireAdmin] },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
         const cards = await getCampaignPerformance();
         return reply.send({ cards });
@@ -139,7 +139,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get(
     "/api/v1/admin/campaigns/projection-summary",
     { preHandler: [requireAdmin] },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
         const summary = await getCampaignProjectionSummary();
         return reply.send({ summary });
@@ -155,8 +155,7 @@ export async function adminRoutes(app: FastifyInstance) {
     "/api/v1/admin/users",
     { preHandler: [requireAdmin] },
     async (_request, reply) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const users = await (prisma.user.findMany as any)({
+      const users = await prisma.user.findMany({
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -172,7 +171,7 @@ export async function adminRoutes(app: FastifyInstance) {
             select: { total: true, createdAt: true, status: true },
           },
         },
-      }) as any[];
+      });
 
       const enriched = await Promise.all(users.map(async (u) => {
         const agg = await prisma.order.aggregate({
@@ -208,8 +207,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
       const [logs, user] = await Promise.all([
         getUserAuditLogs(id, limit),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prisma.user.findUnique as any)({
+        prisma.user.findUnique({
           where: { id },
           select: { id: true, name: true, email: true, isAdmin: true, isReadOnlyAdmin: true, createdAt: true },
         }),

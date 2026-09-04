@@ -70,13 +70,13 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
           <span className={`text-[11px] font-bold uppercase tracking-wider ${cfg.color}`}>{cfg.label}</span>
           <span className="text-gray-300 text-[10px] flex-shrink-0">{entry.timestamp}</span>
         </div>
-        {!!entry.detail.message && (
+        {entry.detail.message && (
           <p className="text-gray-600 text-[12px] mt-0.5 truncate">&ldquo;{String(entry.detail.message)}&rdquo;</p>
         )}
-        {!!entry.detail.action && (
+        {entry.detail.action && (
           <p className="text-gray-500 text-[12px] mt-0.5">{String(entry.detail.action).replace(/_/g, " ")}</p>
         )}
-        {!!entry.detail.error && (
+        {entry.detail.error && (
           <p className="text-red-400 text-[12px] mt-0.5">{String(entry.detail.error)}</p>
         )}
       </div>

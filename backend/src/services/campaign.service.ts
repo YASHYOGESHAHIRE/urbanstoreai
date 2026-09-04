@@ -613,8 +613,7 @@ export async function persistCampaignOutcomes(
 
   for (const c of campaigns) {
     // Skip lazy refresh if: (a) already measured within TTL and (b) not forced
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const lastMs = (c as any).lastMeasuredAt ? (c as any).lastMeasuredAt.getTime() : 0;
+    const lastMs = c.lastMeasuredAt ? c.lastMeasuredAt.getTime() : 0;
     if (!opts.force && lastMs > 0 && now - lastMs < LAZY_REFRESH_TTL_MS) {
       skipped++;
       continue;
@@ -669,7 +668,7 @@ export async function persistCampaignOutcomes(
       daysActiveAtMeasure: Math.round(daysActive * 10) / 10,
     };
 
-    await (prisma.campaign.update as any)({
+    await prisma.campaign.update({
       where: { id: c.id },
       data: {
         actualResults: payload as unknown as Prisma.InputJsonValue,
@@ -841,7 +840,7 @@ export async function getCampaignPerformance(): Promise<CampaignPerformanceCard[
 
     // Use the PERSISTED actual results now on the Campaign row.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const actuals = ((c as any).actualResults as PersistedActualResults | any) ?? {};
+    const actuals = (c.actualResults as PersistedActualResults | any) ?? {};
     const actualUnits = Number(actuals.unitsSold ?? 0);
     const actualRevenue = Number(actuals.revenue ?? 0);
 

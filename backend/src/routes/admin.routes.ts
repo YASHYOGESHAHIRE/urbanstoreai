@@ -128,7 +128,7 @@ export async function adminRoutes(app: FastifyInstance) {
         const cards = await getCampaignPerformance();
         return reply.send({ cards });
       } catch (err: unknown) {
-        request.log.error(err, "campaign performance error");
+        reply.log.error(err, "campaign performance error");
         return reply.code(500).send({ error: "INTERNAL_ERROR" });
       }
     }
@@ -144,7 +144,7 @@ export async function adminRoutes(app: FastifyInstance) {
         const summary = await getCampaignProjectionSummary();
         return reply.send({ summary });
       } catch (err: unknown) {
-        request.log.error(err, "projection summary error");
+        reply.log.error(err, "projection summary error");
         return reply.code(500).send({ error: "INTERNAL_ERROR" });
       }
     }

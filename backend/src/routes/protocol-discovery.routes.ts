@@ -1,6 +1,21 @@
 import { FastifyInstance } from "fastify";
 import crypto from "crypto";
 
+// Per-boot ephemeral key used for the spending-mandate well-known fingerprint
+// ONLY when MANDATE_SECRET and JWT_SECRET are both unset. This guarantees that
+// every deployment has a unique, unpredictable fingerprint (instead of the
+// shared, predictable "urban-store-dev-secret" fallback that every instance
+// would otherwise share). The fingerprint rotates on every process restart,
+// which is acceptable because this is purely informational disclosure (the
+// protocol manifest already disclaims third-party credential-ability).
+const ephemeralBootSecret = crypto.randomBytes(32).toString("hex");
+
+if (!process.env.MANDATE_SECRET && !process.env.JWT_SECRET) {
+  console.warn(
+    "[protocol-discovery] MANDATE_SECRET + JWT_SECRET both unset — using per-boot ephemeral secret for spending-mandate fingerprint."
+  );
+}
+
 export async function protocolDiscoveryRoutes(app: FastifyInstance) {
 
   app.get("/.well-known/agent-commerce", async (_request, reply) => {
@@ -34,7 +49,12 @@ export async function protocolDiscoveryRoutes(app: FastifyInstance) {
   });
 
   app.get("/.well-known/spending-mandate", async (_request, reply) => {
-    const secret = process.env.MANDATE_SECRET || process.env.JWT_SECRET || "urban-store-dev-secret";
+    // Never fall back to a shared hardcoded secret — if no env secret is
+    // configured, use a per-boot random hex. The fingerprint becomes unique
+    // per deployment instance (rotates on restart) rather than being a
+    // globally predictable string that every fork ships with.
+    const secret =
+      process.env.MANDATE_SECRET || process.env.JWT_SECRET || ephemeralBootSecret;
     const keyFingerprint = crypto
       .createHash("sha256")
       .update(secret)

@@ -22,7 +22,7 @@ import { auditLog } from "../services/audit.service.js";
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET ?? "";
 
-function verifyWebhookSignature(body: string, signature: string): boolean {
+function verifyWebhookSignature(body: Buffer, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     // If no secret is configured, skip verification (dev-only fallback)
     console.warn("[webhook] RAZORPAY_WEBHOOK_SECRET not set — skipping signature check");
@@ -37,18 +37,24 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
 export async function webhookRoutes(app: FastifyInstance) {
 
   // POST /webhooks/razorpay
-  // The raw body string is needed for HMAC verification.
-  // server.ts registers a custom content-type parser that returns the parsed object,
-  // so we re-stringify request.body to get the canonical bytes for signing.
+  // The raw body bytes stored by the content-type parser in server.ts MUST be
+  // used for HMAC verification — JSON.stringify(request.body) does NOT produce
+  // byte-identical output to the original Razorpay payload (key ordering,
+  // whitespace, and unicode escapes all diverge) and would cause every
+  // signature check to fail in production.
   app.post(
     "/webhooks/razorpay",
     async (request: FastifyRequest, reply) => {
       const signature = request.headers["x-razorpay-signature"] as string | undefined;
-      // Re-serialise to a stable string for HMAC — Razorpay signs the raw JSON bytes
-      const rawBody = JSON.stringify(request.body);
+      const rawBodyBuffer =
+        (request as unknown as { rawBodyBuffer?: Buffer }).rawBodyBuffer ??
+        // Fallback only if the content-type parser somehow did not attach it
+        // (e.g. empty body). Empty JSON bodies can't contain Razorpay data,
+        // so this is defensive.
+        Buffer.from("");
 
       // ── Signature verification ─────────────────────────────────────────────
-      if (!signature || !verifyWebhookSignature(rawBody, signature)) {
+      if (!signature || !verifyWebhookSignature(rawBodyBuffer, signature)) {
         await auditLog({
           action: "webhook.signature_mismatch",
           payload: { source: "razorpay", reason: "invalid_signature" },

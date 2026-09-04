@@ -20,6 +20,7 @@ import { createCheckout } from "../services/checkout.service.js";
 import { prisma } from "../db/prisma.js";
 import { z } from "zod";
 import crypto from "crypto";
+import { requireAdmin } from "../middleware/admin.middleware.js";
 
 // ─── Auth helper — API key (query/header), OAuth token, or session token ──────
 
@@ -487,8 +488,10 @@ If no upgrade exists, the message field says so — relay it to the user.`,
 
 export async function mcpRoutes(app: FastifyInstance) {
 
-  // GET /mcp/debug — diagnose token state (remove in production)
-  app.get("/mcp/debug", async (request, reply) => {
+  // GET /mcp/debug — diagnose token state (admin-only)
+  app.get("/mcp/debug",
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
     const auth = request.headers.authorization;
     const hasToken = auth?.startsWith("Bearer ");
 
@@ -501,7 +504,8 @@ export async function mcpRoutes(app: FastifyInstance) {
       where: { expiresAt: { lt: new Date() } },
     });
 
-    // Recent grants
+    // Recent grants — do not expose token bytes to the admin panel.
+    // Only reveal first 4 characters (enough for correlation, not brute force).
     const recentGrants = await prisma.oAuthGrant.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -515,10 +519,10 @@ export async function mcpRoutes(app: FastifyInstance) {
       },
     });
 
-    // Claude client state
+    // Claude client state — never select clientSecret even if !! later.
     const claudeClient = await prisma.oAuthClient.findUnique({
       where: { clientId: "claude" },
-      select: { id: true, redirectUris: true, clientSecret: true, scopes: true },
+      select: { id: true, redirectUris: true, scopes: true },
     });
 
     // All OAuth clients
@@ -535,7 +539,7 @@ export async function mcpRoutes(app: FastifyInstance) {
         expired: expiredGrants,
       },
       recentGrants: recentGrants.map(g => ({
-        tokenPrefix: g.accessToken.substring(0, 12) + "...",
+        tokenPrefix: g.accessToken.substring(0, 4) + "...",
         client: g.client.clientId,
         scopes: g.scopes,
         createdAt: g.createdAt,
@@ -545,7 +549,7 @@ export async function mcpRoutes(app: FastifyInstance) {
       })),
       claudeClient: claudeClient ? {
         exists: true,
-        hasSecret: !!claudeClient.clientSecret,
+        hasSecret: false, // public client; never reveal any secret metadata
         redirectUris: claudeClient.redirectUris,
         scopes: claudeClient.scopes,
       } : { exists: false },

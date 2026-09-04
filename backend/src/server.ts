@@ -49,17 +49,24 @@ async function bootstrap() {
     }
   });
 
-  // Allow empty JSON bodies — needed for POST /api/v1/checkout and similar
+  // Allow empty JSON bodies — needed for POST /api/v1/checkout and similar.
+  // Body is consumed as a Buffer so downstream routes (notably the Razorpay
+  // webhook handler) can verify HMAC signatures over the exact original bytes.
+  // JSON.stringify() does NOT reproduce those bytes (key order / whitespace /
+  // unicode escapes diverge), causing HMAC verification to fail in production.
   app.addContentTypeParser(
     "application/json",
-    { parseAs: "string" },
+    { parseAs: "buffer" },
     function (req, body, done) {
-      if (!body || body === "") {
+      const buf = body as Buffer;
+      // Store the raw bytes for webhook HMAC verification.
+      (req as unknown as { rawBodyBuffer: Buffer }).rawBodyBuffer = buf;
+      if (!buf || buf.length === 0) {
         done(null, {});
         return;
       }
       try {
-        done(null, JSON.parse(body as string));
+        done(null, JSON.parse(buf.toString("utf8")));
       } catch (err) {
         done(err as Error, undefined);
       }

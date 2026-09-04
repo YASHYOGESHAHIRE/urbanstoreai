@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { requireAdmin } from "../middleware/admin.middleware.js";
+import { requireAdmin, requireFullAdmin } from "../middleware/admin.middleware.js";
 import { getDashboardSnapshot } from "../services/analytics.service.js";
 import {
   generateCampaignDecisions,
@@ -48,7 +48,7 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── POST /api/v1/admin/campaigns/generate ────────────────────────────────
   app.post(
     "/api/v1/admin/campaigns/generate",
-    { preHandler: [requireAdmin] },
+    { preHandler: [requireAdmin, requireFullAdmin] },
     async (request, reply) => {
       try {
         await generateCampaignDecisions();
@@ -68,7 +68,7 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── POST /api/v1/admin/campaigns/:id/approve ─────────────────────────────
   app.post(
     "/api/v1/admin/campaigns/:id/approve",
-    { preHandler: [requireAdmin] },
+    { preHandler: [requireAdmin, requireFullAdmin] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       try {
@@ -95,7 +95,7 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── POST /api/v1/admin/campaigns/:id/dismiss ─────────────────────────────
   app.post(
     "/api/v1/admin/campaigns/:id/dismiss",
-    { preHandler: [requireAdmin] },
+    { preHandler: [requireAdmin, requireFullAdmin] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       try {

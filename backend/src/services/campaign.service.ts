@@ -787,7 +787,9 @@ function buildVerdictAndFeedback(
   let feedback = "";
   if (verdict === "ahead") {
     feedback = `Actual revenue is +${Math.round(deltaRevenuePct * 100)}% above projection. Reprioritise this campaign type — ${
-      deltaUnitsPct > 0.1 ? "units (+${Math.round(deltaUnitsPct * 100)}%) confirm the creative and price are resonating." : "AOV lifted; consider extending this campaign 2–3 days."
+      deltaUnitsPct > 0.1
+        ? `units (+${Math.round(deltaUnitsPct * 100)}%) confirm the creative and price are resonating.`
+        : "AOV lifted; consider extending this campaign 2–3 days."
     }`;
   } else if (verdict === "on_track") {
     feedback = `Performance within ±15% of projection (${deltaRevenuePct >= 0 ? "+" : ""}${Math.round(deltaRevenuePct * 100)}% revenue, ${deltaUnitsPct >= 0 ? "+" : ""}${Math.round(deltaUnitsPct * 100)}% units). Keep running and re-check at day 5.`;

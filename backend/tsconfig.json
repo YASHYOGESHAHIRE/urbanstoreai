@@ -15,5 +15,14 @@
     "sourceMap": true
   },
   "include": ["src/**/*", "api/**/*", "*.json"],
-  "exclude": ["node_modules", "dist", "src/bar-tests.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/bar-tests.ts",
+    "src/embed-catalogue.ts",
+    "src/test-search.ts",
+    "src/fix-claude-redirect.ts",
+    "src/fix-oauth-clients.ts",
+    "src/seed.ts"
+  ]
 }

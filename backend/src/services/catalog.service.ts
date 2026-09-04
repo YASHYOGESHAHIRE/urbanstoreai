@@ -139,9 +139,10 @@ async function vectorSearch(params: SearchParams) {
       notSuitableFor: [],
       characteristics: {},
     });
-    queryVec = await embed(text);
+    const result = await embed(text);
+    if (!result) return null; // model not available — fall back to keyword
+    queryVec = result;
   } catch {
-    // Embedding model not loaded yet — fall back to keyword
     return null;
   }
 
